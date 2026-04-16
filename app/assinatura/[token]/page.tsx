@@ -52,27 +52,33 @@ function dataUrlToBlob(dataUrl: string) {
 function normalizeContractHtmlForMobile(html: string) {
   if (!html) return "";
 
-  return html
-    .replace(/display:\s*grid/gi, "display:block")
-    .replace(/display:\s*flex/gi, "display:block")
-    .replace(/grid-template-columns\s*:[^;"]+;?/gi, "")
-    .replace(/flex-wrap\s*:[^;"]+;?/gi, "")
-    .replace(/justify-content\s*:[^;"]+;?/gi, "")
-    .replace(/align-items\s*:[^;"]+;?/gi, "")
-    .replace(
-      /width:\s*(48|49|50|33|32|31|30|29|28|27|26|25)%/gi,
-      "width:100%"
-    )
-    .replace(/min-width\s*:[^;"]+;?/gi, "min-width:0;")
-    .replace(/max-width\s*:[^;"]+;?/gi, "max-width:100%;")
-    .replace(/height:\s*[^;"]+;?/gi, "")
-    .replace(/font-size:\s*32px/gi, "font-size:28px")
-    .replace(/font-size:\s*28px/gi, "font-size:24px")
-    .replace(/font-size:\s*24px/gi, "font-size:20px")
-    .replace(/padding:\s*24px/gi, "padding:16px")
-    .replace(/padding:\s*20px/gi, "padding:14px")
-    .replace(/border-radius:\s*24px/gi, "border-radius:18px")
-    .replace(/border-radius:\s*20px/gi, "border-radius:16px");
+  let output = html;
+
+  const replacements: Array<[RegExp, string]> = [
+    [/display:\s*grid/gi, "display:block"],
+    [/display:\s*flex/gi, "display:block"],
+    [/grid-template-columns\s*:[^;]+;?/gi, ""],
+    [/flex-wrap\s*:[^;]+;?/gi, ""],
+    [/justify-content\s*:[^;]+;?/gi, ""],
+    [/align-items\s*:[^;]+;?/gi, ""],
+    [/width:\s*(48|49|50|33|32|31|30|29|28|27|26|25)%/gi, "width:100%"],
+    [/min-width\s*:[^;]+;?/gi, "min-width:0;"],
+    [/max-width\s*:[^;]+;?/gi, "max-width:100%;"],
+    [/height:\s*[^;]+;?/gi, ""],
+    [/font-size:\s*32px/gi, "font-size:28px"],
+    [/font-size:\s*28px/gi, "font-size:24px"],
+    [/font-size:\s*24px/gi, "font-size:20px"],
+    [/padding:\s*24px/gi, "padding:16px"],
+    [/padding:\s*20px/gi, "padding:14px"],
+    [/border-radius:\s*24px/gi, "border-radius:18px"],
+    [/border-radius:\s*20px/gi, "border-radius:16px"],
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    output = output.replace(pattern, replacement);
+  }
+
+  return output;
 }
 
 export default function SignaturePage({
@@ -382,6 +388,9 @@ export default function SignaturePage({
     );
   }
 
+  const safeSigner = signer;
+  const safeRequestRow = requestRow;
+
   function ContractPanel() {
     return (
       <section className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -468,7 +477,7 @@ export default function SignaturePage({
                     Assinante
                   </p>
                   <p className="truncate text-sm text-slate-500">
-                    {signer.name}
+                    {safeSigner.name}
                   </p>
                 </div>
               </div>
@@ -534,7 +543,7 @@ export default function SignaturePage({
                 </div>
               </div>
 
-              {signer.require_selfie ? (
+              {safeSigner.require_selfie ? (
                 <UploadField
                   label="Selfie"
                   buttonText={selfie ? selfie.name : "Tirar selfie agora"}
@@ -543,7 +552,7 @@ export default function SignaturePage({
                 />
               ) : null}
 
-              {signer.require_document_front ? (
+              {safeSigner.require_document_front ? (
                 <UploadField
                   label="Frente do documento"
                   buttonText={
@@ -556,7 +565,7 @@ export default function SignaturePage({
                 />
               ) : null}
 
-              {signer.require_document_back ? (
+              {safeSigner.require_document_back ? (
                 <UploadField
                   label="Verso do documento"
                   buttonText={
@@ -636,10 +645,10 @@ export default function SignaturePage({
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[360px]">
-              <InfoMiniCard label="Assinante" value={signer.name} />
+              <InfoMiniCard label="Assinante" value={safeSigner.name} />
               <InfoMiniCard
                 label="Status"
-                value={requestRow.status || "Pendente"}
+                value={safeRequestRow.status || "Pendente"}
               />
             </div>
           </div>
