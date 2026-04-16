@@ -10,6 +10,8 @@ import {
   Upload,
   RotateCcw,
   PencilLine,
+  FileText,
+  SquarePen,
 } from "lucide-react";
 
 type Signer = {
@@ -47,6 +49,32 @@ function dataUrlToBlob(dataUrl: string) {
   return new Blob([u8arr], { type: mime });
 }
 
+function normalizeContractHtmlForMobile(html: string) {
+  if (!html) return "";
+
+  return html
+    .replace(/display:\s*grid/gi, "display:block")
+    .replace(/display:\s*flex/gi, "display:block")
+    .replace(/grid-template-columns\s*:[^;"]+;?/gi, "")
+    .replace(/flex-wrap\s*:[^;"]+;?/gi, "")
+    .replace(/justify-content\s*:[^;"]+;?/gi, "")
+    .replace(/align-items\s*:[^;"]+;?/gi, "")
+    .replace(
+      /width:\s*(48|49|50|33|32|31|30|29|28|27|26|25)%/gi,
+      "width:100%"
+    )
+    .replace(/min-width\s*:[^;"]+;?/gi, "min-width:0;")
+    .replace(/max-width\s*:[^;"]+;?/gi, "max-width:100%;")
+    .replace(/height:\s*[^;"]+;?/gi, "")
+    .replace(/font-size:\s*32px/gi, "font-size:28px")
+    .replace(/font-size:\s*28px/gi, "font-size:24px")
+    .replace(/font-size:\s*24px/gi, "font-size:20px")
+    .replace(/padding:\s*24px/gi, "padding:16px")
+    .replace(/padding:\s*20px/gi, "padding:14px")
+    .replace(/border-radius:\s*24px/gi, "border-radius:18px")
+    .replace(/border-radius:\s*20px/gi, "border-radius:16px");
+}
+
 export default function SignaturePage({
   params,
 }: {
@@ -67,6 +95,10 @@ export default function SignaturePage({
   const [documentBack, setDocumentBack] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"documento" | "assinatura">(
+    "documento"
+  );
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -83,6 +115,19 @@ export default function SignaturePage({
   }, [token]);
 
   useEffect(() => {
+    const handleViewport = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    handleViewport();
+    window.addEventListener("resize", handleViewport);
+
+    return () => {
+      window.removeEventListener("resize", handleViewport);
+    };
+  }, []);
+
+  useEffect(() => {
     const run = () => setupCanvas();
     run();
     window.addEventListener("resize", run);
@@ -90,7 +135,7 @@ export default function SignaturePage({
     return () => {
       window.removeEventListener("resize", run);
     };
-  }, [state.loading]);
+  }, [state.loading, isMobile, mobileTab]);
 
   function setupCanvas() {
     const canvas = canvasRef.current;
@@ -100,7 +145,6 @@ export default function SignaturePage({
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const width = wrapper.clientWidth;
     const height = window.innerWidth < 640 ? 170 : 210;
-
     const previous = hasDrawnRef.current ? canvas.toDataURL("image/png") : null;
 
     canvas.width = width * ratio;
@@ -304,6 +348,13 @@ export default function SignaturePage({
     return requestRow?.contract_title || "Contrato digital";
   }, [requestRow]);
 
+  const normalizedContractHtml = useMemo(() => {
+    if (!requestRow?.contract_html) return "";
+    return isMobile
+      ? normalizeContractHtmlForMobile(requestRow.contract_html)
+      : requestRow.contract_html;
+  }, [requestRow, isMobile]);
+
   if (state.loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f7fb] px-4">
@@ -331,6 +382,238 @@ export default function SignaturePage({
     );
   }
 
+  function ContractPanel() {
+    return (
+      <section className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-950">
+                Documento do contrato
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Visualização completa do contrato para leitura e conferência.
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Leitura antes da assinatura
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-2 sm:p-4 lg:p-5">
+          <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
+            <article
+              className="
+                contract-html
+                mx-auto
+                w-full
+                max-w-none
+                overflow-x-hidden
+                bg-white
+                p-3
+                text-slate-800
+                sm:p-5
+                lg:p-8
+                [&_*]:max-w-full
+                [&_img]:h-auto
+                [&_img]:max-w-full
+                [&_table]:w-full
+                [&_table]:max-w-full
+                [&_table]:border-collapse
+                [&_table]:table-fixed
+                [&_td]:align-top
+                [&_td]:border-slate-200
+                [&_td]:break-words
+                [&_th]:border-slate-200
+                [&_th]:break-words
+                [&_h1]:text-2xl
+                [&_h1]:font-semibold
+                [&_h1]:tracking-[-0.03em]
+                [&_h1]:text-slate-950
+                [&_h2]:text-xl
+                [&_h2]:font-semibold
+                [&_h2]:tracking-[-0.02em]
+                [&_h2]:text-slate-950
+                [&_h3]:text-lg
+                [&_h3]:font-semibold
+                [&_h3]:text-slate-900
+                [&_p]:leading-7
+                [&_p]:text-slate-700
+                [&_strong]:text-slate-950
+              "
+              dangerouslySetInnerHTML={{ __html: normalizedContractHtml }}
+            />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function SignaturePanel() {
+    return (
+      <aside className="min-w-0">
+        <div className="lg:sticky lg:top-6">
+          <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-4 sm:px-5 sm:py-5">
+              <div className="flex items-center gap-3">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-950">
+                    Assinante
+                  </p>
+                  <p className="truncate text-sm text-slate-500">
+                    {signer.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
+              <FieldLabel htmlFor="signature-name">
+                Nome para assinatura
+              </FieldLabel>
+              <input
+                id="signature-name"
+                value={signatureName}
+                onChange={(e) => setSignatureName(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
+                placeholder="Seu nome completo"
+              />
+
+              <FieldLabel htmlFor="signature-document">Documento</FieldLabel>
+              <input
+                id="signature-document"
+                value={signatureDocument}
+                onChange={(e) => setSignatureDocument(e.target.value)}
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
+                placeholder="CPF ou documento"
+              />
+
+              <div className="pt-1">
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="text-sm font-semibold text-slate-900">
+                    Assinatura com o dedo
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={clearSignature}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Limpar
+                  </button>
+                </div>
+
+                <div
+                  ref={wrapperRef}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                >
+                  <canvas
+                    ref={canvasRef}
+                    className="block w-full touch-none bg-white"
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                  />
+                </div>
+
+                <div className="mt-2 inline-flex items-center gap-2 text-xs leading-5 text-slate-400">
+                  <PencilLine className="h-3.5 w-3.5 shrink-0" />
+                  No celular, assine com o dedo diretamente na tela.
+                </div>
+              </div>
+
+              {signer.require_selfie ? (
+                <UploadField
+                  label="Selfie"
+                  buttonText={selfie ? selfie.name : "Tirar selfie agora"}
+                  captureMode="user"
+                  onChange={(file) => setSelfie(file)}
+                />
+              ) : null}
+
+              {signer.require_document_front ? (
+                <UploadField
+                  label="Frente do documento"
+                  buttonText={
+                    documentFront
+                      ? documentFront.name
+                      : "Fotografar frente do documento"
+                  }
+                  captureMode="environment"
+                  onChange={(file) => setDocumentFront(file)}
+                />
+              ) : null}
+
+              {signer.require_document_back ? (
+                <UploadField
+                  label="Verso do documento"
+                  buttonText={
+                    documentBack
+                      ? documentBack.name
+                      : "Fotografar verso do documento"
+                  }
+                  captureMode="environment"
+                  onChange={(file) => setDocumentBack(file)}
+                />
+              ) : null}
+
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={accepted}
+                  onChange={(e) => setAccepted(e.target.checked)}
+                  className="mt-1 shrink-0"
+                />
+                <span className="text-sm leading-6 text-slate-700">
+                  Declaro que li o documento e concordo com os termos
+                  apresentados.
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={saving}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                Assinar digitalmente
+              </button>
+
+              {resultMessage ? (
+                <div
+                  className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
+                    resultMessage.toLowerCase().includes("sucesso")
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-rose-200 bg-rose-50 text-rose-700"
+                  }`}
+                >
+                  {resultMessage}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
       <div className="mx-auto max-w-7xl px-3 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
@@ -342,14 +625,13 @@ export default function SignaturePage({
                 Assinatura digital
               </div>
 
-              <h1 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-[32px]">
+              <h1 className="mt-3 text-[28px] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[32px]">
                 {title}
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Leia o contrato abaixo com atenção e finalize a assinatura
-                digital no formulário ao lado. Em telas menores, o documento
-                aparece primeiro e a área de assinatura logo abaixo.
+                digital no formulário.
               </p>
             </div>
 
@@ -363,236 +645,46 @@ export default function SignaturePage({
           </div>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_420px]">
-          <section className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">
-                    Documento do contrato
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Visualização completa do contrato para leitura e conferência.
-                  </p>
-                </div>
+        {isMobile ? (
+          <div className="space-y-4">
+            <div className="rounded-[24px] border border-slate-200 bg-white p-2 shadow-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("documento")}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition ${
+                    mobileTab === "documento"
+                      ? "bg-slate-950 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  Documento
+                </button>
 
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Leitura antes da assinatura
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("assinatura")}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition ${
+                    mobileTab === "assinatura"
+                      ? "bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  <SquarePen className="h-4 w-4" />
+                  Assinatura
+                </button>
               </div>
             </div>
 
-            <div className="bg-white p-2 sm:p-4 lg:p-5">
-              <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
-                <div className="max-h-none overflow-x-auto">
-                  <article
-                    className="
-                      contract-html
-                      mx-auto
-                      w-full
-                      max-w-none
-                      bg-white
-                      p-4
-                      text-slate-800
-                      sm:p-6
-                      lg:p-8
-                      [&_*]:max-w-full
-                      [&_img]:h-auto
-                      [&_img]:max-w-full
-                      [&_table]:w-full
-                      [&_table]:table-auto
-                      [&_table]:border-collapse
-                      [&_table]:text-sm
-                      [&_td]:align-top
-                      [&_td]:break-words
-                      [&_td]:border-slate-200
-                      [&_td]:p-2
-                      [&_th]:border-slate-200
-                      [&_th]:p-2
-                      [&_th]:text-left
-                      [&_h1]:text-2xl
-                      [&_h1]:font-semibold
-                      [&_h1]:tracking-[-0.03em]
-                      [&_h1]:text-slate-950
-                      [&_h2]:text-xl
-                      [&_h2]:font-semibold
-                      [&_h2]:tracking-[-0.02em]
-                      [&_h2]:text-slate-950
-                      [&_h3]:text-lg
-                      [&_h3]:font-semibold
-                      [&_h3]:text-slate-900
-                      [&_p]:leading-7
-                      [&_p]:text-slate-700
-                      [&_strong]:text-slate-950
-                    "
-                    dangerouslySetInnerHTML={{ __html: requestRow.contract_html }}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <aside className="min-w-0">
-            <div className="xl:sticky xl:top-6">
-              <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-200 px-4 py-4 sm:px-5 sm:py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700">
-                      <ShieldCheck className="h-5 w-5" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-950">
-                        Assinante
-                      </p>
-                      <p className="truncate text-sm text-slate-500">
-                        {signer.name}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
-                  <FieldLabel htmlFor="signature-name">
-                    Nome para assinatura
-                  </FieldLabel>
-                  <input
-                    id="signature-name"
-                    value={signatureName}
-                    onChange={(e) => setSignatureName(e.target.value)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
-                    placeholder="Seu nome completo"
-                  />
-
-                  <FieldLabel htmlFor="signature-document">
-                    Documento
-                  </FieldLabel>
-                  <input
-                    id="signature-document"
-                    value={signatureDocument}
-                    onChange={(e) => setSignatureDocument(e.target.value)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
-                    placeholder="CPF ou documento"
-                  />
-
-                  <div className="pt-1">
-                    <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <label className="text-sm font-semibold text-slate-900">
-                        Assinatura com o dedo
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={clearSignature}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Limpar
-                      </button>
-                    </div>
-
-                    <div
-                      ref={wrapperRef}
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
-                    >
-                      <canvas
-                        ref={canvasRef}
-                        className="block w-full touch-none bg-white"
-                        onMouseDown={startDrawing}
-                        onMouseMove={draw}
-                        onMouseUp={stopDrawing}
-                        onMouseLeave={stopDrawing}
-                        onTouchStart={startDrawing}
-                        onTouchMove={draw}
-                        onTouchEnd={stopDrawing}
-                      />
-                    </div>
-
-                    <div className="mt-2 inline-flex items-center gap-2 text-xs leading-5 text-slate-400">
-                      <PencilLine className="h-3.5 w-3.5 shrink-0" />
-                      No celular, assine com o dedo diretamente na tela.
-                    </div>
-                  </div>
-
-                  {signer.require_selfie ? (
-                    <UploadField
-                      label="Selfie"
-                      buttonText={selfie ? selfie.name : "Tirar selfie agora"}
-                      captureMode="user"
-                      onChange={(file) => setSelfie(file)}
-                    />
-                  ) : null}
-
-                  {signer.require_document_front ? (
-                    <UploadField
-                      label="Frente do documento"
-                      buttonText={
-                        documentFront
-                          ? documentFront.name
-                          : "Fotografar frente do documento"
-                      }
-                      captureMode="environment"
-                      onChange={(file) => setDocumentFront(file)}
-                    />
-                  ) : null}
-
-                  {signer.require_document_back ? (
-                    <UploadField
-                      label="Verso do documento"
-                      buttonText={
-                        documentBack
-                          ? documentBack.name
-                          : "Fotografar verso do documento"
-                      }
-                      captureMode="environment"
-                      onChange={(file) => setDocumentBack(file)}
-                    />
-                  ) : null}
-
-                  <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={accepted}
-                      onChange={(e) => setAccepted(e.target.checked)}
-                      className="mt-1 shrink-0"
-                    />
-                    <span className="text-sm leading-6 text-slate-700">
-                      Declaro que li o documento e concordo com os termos
-                      apresentados.
-                    </span>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={saving}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
-                    Assinar digitalmente
-                  </button>
-
-                  {resultMessage ? (
-                    <div
-                      className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
-                        resultMessage.toLowerCase().includes("sucesso")
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-rose-200 bg-rose-50 text-rose-700"
-                      }`}
-                    >
-                      {resultMessage}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
+            {mobileTab === "documento" ? <ContractPanel /> : <SignaturePanel />}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_420px]">
+            <ContractPanel />
+            <SignaturePanel />
+          </div>
+        )}
       </div>
     </main>
   );
@@ -653,7 +745,7 @@ function UploadField({
 
       <label className="flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
         <Upload className="h-4 w-4 shrink-0" />
-        <span className="line-clamp-2 break-all">{buttonText}</span>
+        <span className="min-w-0 flex-1 break-words">{buttonText}</span>
         <input
           type="file"
           className="hidden"

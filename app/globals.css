@@ -23,3 +23,224 @@ html.dark body {
   background: #000000;
   color: #ededed;
 }
+
+/* =========================
+   DECORFLOW - CONTRATO MOBILE
+========================= */
+
+.contract-html-mobile,
+.contract-html-mobile * {
+  box-sizing: border-box;
+}
+
+.contract-html-mobile {
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.contract-html-mobile h1,
+.contract-html-mobile h2,
+.contract-html-mobile h3,
+.contract-html-mobile h4,
+.contract-html-mobile p,
+.contract-html-mobile span,
+.contract-html-mobile div,
+.contract-html-mobile strong,
+.contract-html-mobile small,
+.contract-html-mobile td,
+.contract-html-mobile th,
+.contract-html-mobile li {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+}
+
+.contract-html-mobile img,
+.contract-html-mobile svg,
+.contract-html-mobile video,
+.contract-html-mobile canvas,
+.contract-html-mobile iframe {
+  display: block;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.contract-html-mobile table {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+}
+
+.contract-html-mobile th,
+.contract-html-mobile td {
+  max-width: 100% !important;
+  vertical-align: top !important;
+}
+
+.contract-html-mobile [style*="display:grid"],
+.contract-html-mobile [style*="display: grid"] {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.contract-html-mobile [style*="display:flex"],
+.contract-html-mobile [style*="display: flex"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.contract-html-mobile [style*="width: 48%"],
+.contract-html-mobile [style*="width:48%"],
+.contract-html-mobile [style*="width: 49%"],
+.contract-html-mobile [style*="width:49%"],
+.contract-html-mobile [style*="width: 50%"],
+.contract-html-mobile [style*="width:50%"] {
+  width: calc(50% - 8px) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.contract-html-mobile [style*="width: 33%"],
+.contract-html-mobile [style*="width:33%"],
+.contract-html-mobile [style*="width: 32%"],
+.contract-html-mobile [style*="width:32%"],
+.contract-html-mobile [style*="width: 31%"],
+.contract-html-mobile [style*="width:31%"],
+.contract-html-mobile [style*="width: 30%"],
+.contract-html-mobile [style*="width:30%"] {
+  width: calc(33.333% - 8px) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.contract-html-mobile [style*="min-width"] {
+  min-width: 0 !important;
+}
+
+.contract-html-mobile [style*="max-width"] {
+  max-width: 100% !important;
+}
+
+@media (max-width: 767px) {
+  .contract-html-mobile {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+  }
+
+  .contract-html-mobile h1 {
+    font-size: 28px !important;
+    line-height: 1.15 !important;
+  }
+
+  .contract-html-mobile h2 {
+    font-size: 22px !important;
+    line-height: 1.2 !important;
+  }
+
+  .contract-html-mobile h3 {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+  }
+
+  .contract-html-mobile [style*="display:grid"],
+  .contract-html-mobile [style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .contract-html-mobile [style*="display:flex"],
+  .contract-html-mobile [style*="display: flex"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .contract-html-mobile [style*="width: 48%"],
+  .contract-html-mobile [style*="width:48%"],
+  .contract-html-mobile [style*="width: 49%"],
+  .contract-html-mobile [style*="width:49%"],
+  .contract-html-mobile [style*="width: 50%"],
+  .contract-html-mobile [style*="width:50%"],
+  .contract-html-mobile [style*="width: 33%"],
+  .contract-html-mobile [style*="width:33%"],
+  .contract-html-mobile [style*="width: 32%"],
+  .contract-html-mobile [style*="width:32%"],
+  .contract-html-mobile [style*="width: 31%"],
+  .contract-html-mobile [style*="width:31%"],
+  .contract-html-mobile [style*="width: 30%"],
+  .contract-html-mobile [style*="width:30%"] {
+    width: 100% !important;
+  }
+
+  .contract-html-mobile table,
+  .contract-html-mobile thead,
+  .contract-html-mobile tbody,
+  .contract-html-mobile tr,
+  .contract-html-mobile th,
+  .contract-html-mobile td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .contract-html-mobile thead {
+    display: none !important;
+  }
+
+  .contract-html-mobile tr {
+    margin-bottom: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    padding: 10px !important;
+    background: #fff !important;
+  }
+
+  .contract-html-mobile td,
+  .contract-html-mobile th {
+    border: none !important;
+    padding: 6px 4px !important;
+  }
+
+  .contract-html-mobile [style*="padding: 24px"],
+  .contract-html-mobile [style*="padding:24px"] {
+    padding: 16px !important;
+  }
+
+  .contract-html-mobile [style*="padding: 20px"],
+  .contract-html-mobile [style*="padding:20px"] {
+    padding: 14px !important;
+  }
+
+  .contract-html-mobile [style*="font-size: 32px"],
+  .contract-html-mobile [style*="font-size:32px"] {
+    font-size: 28px !important;
+  }
+
+  .contract-html-mobile [style*="font-size: 28px"],
+  .contract-html-mobile [style*="font-size:28px"] {
+    font-size: 24px !important;
+  }
+
+  .contract-html-mobile [style*="font-size: 24px"],
+  .contract-html-mobile [style*="font-size:24px"] {
+    font-size: 20px !important;
+  }
+
+  .contract-html-mobile [style*="border-radius: 24px"],
+  .contract-html-mobile [style*="border-radius:24px"] {
+    border-radius: 18px !important;
+  }
+
+  .contract-html-mobile br {
+    display: initial;
+  }
+}
