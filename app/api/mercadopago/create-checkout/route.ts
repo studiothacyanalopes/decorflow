@@ -191,38 +191,38 @@ export async function POST(request: NextRequest) {
 
     const preference = new Preference(mp);
 
-    const preferenceBody = {
-      items: [
-        {
-          id: `decorflow-${planId}`,
-          title: `${systemName} ${finalPlanLabel}`,
-          description: `Assinatura mensal ${systemName} - plano ${finalPlanLabel}`,
-          quantity: 1,
-          currency_id: "BRL",
-          unit_price: finalAmount,
-        },
-      ],
-      payer: userEmail ? { email: userEmail } : undefined,
-      back_urls: {
-        success: successUrl,
-        pending: pendingUrl,
-        failure: failureUrl,
-      },
-      external_reference: companyId,
-      metadata: {
-        checkout_type: "subscription",
-        system_name: systemName,
-        source,
-        company_id: companyId,
-        company_name: companyName,
-        plan_id: planId,
-        plan_label: finalPlanLabel,
-        amount: finalAmount,
-        billing_cycle: billingCycle,
-      },
-      notification_url: webhookUrl,
-      statement_descriptor: "DECORFLOW",
-    };
+const preferenceBody: any = {
+  items: [
+    {
+      id: `decorflow-${planId}`,
+      title: `${systemName} ${finalPlanLabel}`,
+      description: `Assinatura mensal ${systemName} - plano ${finalPlanLabel}`,
+      quantity: 1,
+      currency_id: "BRL",
+      unit_price: finalAmount,
+    },
+  ],
+  payer: userEmail ? { email: userEmail } : undefined,
+  back_urls: {
+    success: successUrl,
+    pending: pendingUrl,
+    failure: failureUrl,
+  },
+  external_reference: companyId,
+  metadata: {
+    checkout_type: "subscription",
+    system_name: systemName,
+    source,
+    company_id: companyId,
+    company_name: companyName,
+    plan_id: planId,
+    plan_label: finalPlanLabel,
+    amount: finalAmount,
+    billing_cycle: billingCycle,
+  },
+  notification_url: webhookUrl,
+  statement_descriptor: "DECORFLOW",
+};
 
     // Em localhost o Mercado Pago costuma rejeitar auto_return.
     if (!isLocal) {
