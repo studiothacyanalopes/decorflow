@@ -21,6 +21,7 @@ import {
   CalendarDays,
   Truck,
   X,
+  Share2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -123,6 +124,49 @@ function buildWhatsAppUrl(phone?: string | null, text?: string) {
     text || "Olá! Tenho interesse nos seus produtos."
   );
   return `https://wa.me/${base}?text=${message}`;
+}
+
+
+async function shareProduct(params: {
+  company: Company;
+  product: Product;
+}) {
+  const { company, product } = params;
+
+  if (typeof window === "undefined") return;
+
+  const baseUrl = window.location.origin;
+  const currentUrl = window.location.href;
+  const cleanBase = currentUrl.split("#")[0].split("?")[0];
+  const productUrl = `${cleanBase}?produto=${product.slug || product.id}`;
+
+  const shareTitle = product.name;
+  const shareText = `${product.name} - ${formatPrice(
+    product.price
+  )} | ${company.name}`;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: productUrl,
+      });
+      return;
+    }
+
+    await navigator.clipboard.writeText(productUrl);
+    alert("Link copiado com sucesso.");
+  } catch (error: any) {
+    if (error?.name === "AbortError") return;
+
+    try {
+      await navigator.clipboard.writeText(productUrl);
+      alert("Link copiado com sucesso.");
+    } catch {
+      alert("Não foi possível compartilhar agora.");
+    }
+  }
 }
 
 function formatPhoneDigits(value: string) {
@@ -1847,25 +1891,34 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                       </div>
                     ) : null}
 
-                    <div className="mt-8 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleAddToCartFromDetails(selectedProduct)}
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#0b1018] transition hover:opacity-95"
-                      >
-                        <ShoppingBag className="h-4 w-4" />
-                        Adicionar ao carrinho
-                      </button>
+<div className="mt-8 flex flex-wrap gap-3">
+  <button
+    type="button"
+    onClick={() => shareProduct({ company, product: selectedProduct })}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
+  >
+    <Share2 className="h-4 w-4" />
+    Compartilhar
+  </button>
 
-                      <button
-                        type="button"
-                        onClick={openCheckoutModal}
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#16c45b] px-5 text-sm font-semibold text-white transition hover:opacity-95"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        Finalizar compra
-                      </button>
-                    </div>
+  <button
+    type="button"
+    onClick={() => handleAddToCartFromDetails(selectedProduct)}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#0b1018] transition hover:opacity-95"
+  >
+    <ShoppingBag className="h-4 w-4" />
+    Adicionar ao carrinho
+  </button>
+
+  <button
+    type="button"
+    onClick={openCheckoutModal}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#16c45b] px-5 text-sm font-semibold text-white transition hover:opacity-95"
+  >
+    <MessageCircle className="h-4 w-4" />
+    Finalizar compra
+  </button>
+</div>
 
                     <div className="mt-10 rounded-[24px] border border-white/10 bg-white/5 p-4 sm:p-5">
                       <div className="mb-4 flex items-center justify-between gap-3">
@@ -2500,20 +2553,32 @@ function ProductCard({
       onClick={() => onOpenDetails(product)}
       className="group cursor-pointer overflow-hidden rounded-[24px] border border-white/10 bg-[#0b1018] shadow-[0_18px_40px_rgba(0,0,0,0.24)] transition hover:-translate-y-1 hover:border-white/15"
     >
-      <div className="relative aspect-[0.84/1] overflow-hidden bg-[#121a2e]">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image}
-            alt={product.name}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-white/35">
-            <Package2 className="h-7 w-7" />
-          </div>
-        )}
-      </div>
+<div className="relative aspect-[0.84/1] overflow-hidden bg-[#121a2e]">
+  <button
+    type="button"
+    onClick={(e) => {
+      e.stopPropagation();
+      shareProduct({ company, product });
+    }}
+    className="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white/90 shadow-lg backdrop-blur transition hover:scale-[1.04] hover:bg-black/60"
+    aria-label={`Compartilhar ${product.name}`}
+  >
+    <Share2 className="h-4 w-4" />
+  </button>
+
+  {image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={image}
+      alt={product.name}
+      className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center text-white/35">
+      <Package2 className="h-7 w-7" />
+    </div>
+  )}
+</div>
 
       <div className="p-3 sm:p-4">
         <div className="mb-2 flex flex-wrap gap-2">

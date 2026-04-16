@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   ChevronDown,
@@ -8,7 +9,6 @@ import {
   Menu,
   Moon,
   Search,
-  Settings,
   Sun,
   Upload,
   User,
@@ -17,6 +17,7 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 type DashboardHeaderProps = {
   collapsed: boolean;
@@ -24,22 +25,39 @@ type DashboardHeaderProps = {
   onOpenMobile: () => void;
 };
 
+const AVATAR_STORAGE_KEY = "decorflow-user-avatar";
+
 export function DashboardHeader({
   collapsed,
   mobileOpen,
   onOpenMobile,
 }: DashboardHeaderProps) {
+  const router = useRouter();
+
   const [darkMode, setDarkMode] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-useEffect(() => {
-  const storedTheme = localStorage.getItem("decorflow-theme");
-  const shouldUseDark = storedTheme === "dark";
+  const userName = "genesis";
+  const userRole = "Administrador";
+  const userInitials = userName.slice(0, 2).toUpperCase();
 
-  setDarkMode(shouldUseDark);
-  document.documentElement.classList.toggle("dark", shouldUseDark);
-}, []);
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("decorflow-theme");
+    const shouldUseDark = storedTheme === "dark";
+
+    setDarkMode(shouldUseDark);
+    document.documentElement.classList.toggle("dark", shouldUseDark);
+  }, []);
+
+  useEffect(() => {
+    const storedAvatar = localStorage.getItem(AVATAR_STORAGE_KEY) || "";
+    setAvatarUrl(storedAvatar);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -53,13 +71,66 @@ useEffect(() => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-function toggleTheme() {
-  const next = !darkMode;
+  function toggleTheme() {
+    const next = !darkMode;
 
-  setDarkMode(next);
-  document.documentElement.classList.toggle("dark", next);
-  localStorage.setItem("decorflow-theme", next ? "dark" : "light");
-}
+    setDarkMode(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("decorflow-theme", next ? "dark" : "light");
+  }
+
+  function handleGoToNewOrder() {
+    setUserMenuOpen(false);
+    router.push("/dashboard/pedidos?novo=1");
+  }
+
+  function handleOpenUpload() {
+    fileInputRef.current?.click();
+  }
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Selecione uma imagem válida.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setAvatarUrl(result);
+      localStorage.setItem(AVATAR_STORAGE_KEY, result);
+      setUserMenuOpen(false);
+    };
+
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function handleRemovePhoto() {
+    setAvatarUrl("");
+    localStorage.removeItem(AVATAR_STORAGE_KEY);
+    setUserMenuOpen(false);
+  }
+
+  async function handleLogout() {
+    try {
+      setLoggingOut(true);
+      setUserMenuOpen(false);
+
+      await supabase.auth.signOut();
+
+      localStorage.removeItem("decorflow-theme");
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-[#07111f]/85">
@@ -112,6 +183,7 @@ function toggleTheme() {
 
           <button
             type="button"
+            onClick={handleGoToNewOrder}
             className="hidden h-11 items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#020617_0%,#0f172a_45%,#1d4ed8_100%)] px-4 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5 sm:inline-flex"
           >
             <Plus className="h-4 w-4" />
@@ -127,6 +199,14 @@ function toggleTheme() {
           </button>
 
           <div className="relative" ref={menuRef}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+
             <button
               type="button"
               onClick={() => setUserMenuOpen((prev) => !prev)}
@@ -136,15 +216,24 @@ function toggleTheme() {
               )}
             >
               <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#020617_0%,#0f172a_45%,#1d4ed8_100%)] text-sm font-bold text-white shadow-sm">
-                GE
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt={userName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  userInitials
+                )}
               </div>
 
               <div className="hidden sm:block">
                 <p className="max-w-[110px] truncate text-sm font-semibold text-slate-950 dark:text-white">
-                  genesis
+                  {userName}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Administrador
+                  {userRole}
                 </p>
               </div>
 
@@ -166,15 +255,25 @@ function toggleTheme() {
             >
               <div className="rounded-2xl bg-[linear-gradient(135deg,#eff6ff_0%,#eef2ff_100%)] p-3 dark:bg-[linear-gradient(135deg,rgba(30,41,59,0.75),rgba(15,23,42,0.95))]">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#020617_0%,#0f172a_45%,#1d4ed8_100%)] text-sm font-bold text-white">
-                    GE
+                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#020617_0%,#0f172a_45%,#1d4ed8_100%)] text-sm font-bold text-white">
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarUrl}
+                        alt={userName}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      userInitials
+                    )}
                   </div>
+
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                      genesis
+                      {userName}
                     </p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      Administrador
+                      {userRole}
                     </p>
                   </div>
                 </div>
@@ -191,6 +290,7 @@ function toggleTheme() {
 
                 <button
                   type="button"
+                  onClick={handleOpenUpload}
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
                 >
                   <Upload className="h-4 w-4" />
@@ -199,6 +299,7 @@ function toggleTheme() {
 
                 <button
                   type="button"
+                  onClick={handleOpenUpload}
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
                 >
                   <UserCircle2 className="h-4 w-4" />
@@ -207,28 +308,24 @@ function toggleTheme() {
 
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                  onClick={handleRemovePhoto}
+                  disabled={!avatarUrl}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-rose-500/10"
                 >
                   <XCircle className="h-4 w-4" />
                   Remover foto
-                </button>
-
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
-                >
-                  <Settings className="h-4 w-4" />
-                  Preferências
                 </button>
               </div>
 
               <div className="mt-2 border-t border-slate-200 pt-2 dark:border-white/10">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-rose-500/10"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sair
+                  {loggingOut ? "Saindo..." : "Sair"}
                 </button>
               </div>
             </div>
@@ -237,13 +334,24 @@ function toggleTheme() {
       </div>
 
       <div className="border-t border-slate-200/70 px-4 py-3 lg:hidden dark:border-white/10">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="text"
-            placeholder="Buscar pedidos, clientes, produtos..."
-            className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-white/10"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Buscar pedidos, clientes, produtos..."
+              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-white/10"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoToNewOrder}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#020617_0%,#0f172a_45%,#1d4ed8_100%)] px-4 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5 sm:hidden"
+          >
+            <Plus className="h-4 w-4" />
+            Novo
+          </button>
         </div>
       </div>
     </header>
