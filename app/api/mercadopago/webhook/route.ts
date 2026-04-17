@@ -163,6 +163,8 @@ export async function POST(request: NextRequest) {
     console.log("[decorflow/webhook] payload:", payload);
 
     if (!mpAccessToken) {
+      console.error("[decorflow/webhook] MERCADO_PAGO_ACCESS_TOKEN ausente");
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -194,6 +196,10 @@ export async function POST(request: NextRequest) {
       paymentId = parts[parts.length - 1] || null;
     }
 
+    console.log("[decorflow/webhook] eventType:", eventType);
+    console.log("[decorflow/webhook] paymentId resolvido:", paymentId);
+    console.log("[decorflow/webhook] resource:", resource);
+
     const acceptedEvents = new Set([
       "payment",
       "payment.updated",
@@ -201,6 +207,8 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (eventType && !acceptedEvents.has(eventType)) {
+      console.log("[decorflow/webhook] evento ignorado:", eventType);
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -211,6 +219,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!paymentId) {
+      console.error("[decorflow/webhook] paymentId não encontrado");
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -239,9 +249,16 @@ export async function POST(request: NextRequest) {
     const externalReference = paymentData?.external_reference || null;
     const metadata = (paymentData?.metadata || {}) as Record<string, unknown>;
 
+    console.log("[decorflow/webhook] paymentData.id:", paymentData?.id);
+    console.log("[decorflow/webhook] payment status:", paymentStatus);
+    console.log("[decorflow/webhook] externalReference:", externalReference);
+    console.log("[decorflow/webhook] metadata:", metadata);
+
     const supabaseAdmin = getSupabaseAdmin();
 
     if (!supabaseAdmin) {
+      console.error("[decorflow/webhook] envs do Supabase ausentes");
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -252,6 +269,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (paymentStatus !== "approved") {
+      console.log(
+        "[decorflow/webhook] pagamento ainda não aprovado, update não executado:",
+        paymentStatus
+      );
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -266,7 +288,18 @@ export async function POST(request: NextRequest) {
         externalReference,
       });
 
+    console.log("[decorflow/webhook] companyId resolvido:", companyId);
+    console.log("[decorflow/webhook] planId resolvido:", planId);
+    console.log("[decorflow/webhook] planLabel resolvido:", planLabel);
+    console.log("[decorflow/webhook] amount resolvido:", amount);
+    console.log("[decorflow/webhook] billingCycle resolvido:", billingCycle);
+
     if (!companyId || !isValidUuid(companyId)) {
+      console.error(
+        "[decorflow/webhook] companyId inválido para assinatura:",
+        companyId
+      );
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -280,7 +313,7 @@ export async function POST(request: NextRequest) {
 
     const { data: companyBefore, error: companyLookupError } = await supabaseAdmin
       .from("companies")
-      .select("id, plan, plan_status, active")
+      .select("id, name, slug, plan, plan_status, active, billing_status")
       .eq("id", companyId)
       .maybeSingle();
 
@@ -297,10 +330,13 @@ export async function POST(request: NextRequest) {
         reason: "company_lookup_failed",
         companyId,
         paymentId,
+        error: companyLookupError,
       });
     }
 
     if (!companyBefore) {
+      console.error("[decorflow/webhook] empresa não encontrada:", companyId);
+
       return NextResponse.json({
         ok: true,
         acknowledged: true,
@@ -310,6 +346,8 @@ export async function POST(request: NextRequest) {
         paymentId,
       });
     }
+
+    console.log("[decorflow/webhook] empresa encontrada:", companyBefore);
 
     const approvedAtRaw =
       paymentData?.date_approved || new Date().toISOString();
@@ -329,7 +367,6 @@ export async function POST(request: NextRequest) {
       plan_status: "active",
       billing_status: "active",
       active: true,
-      trial_ends_at: null,
       last_payment_at: finalApprovedAt.toISOString(),
       billing_last_event_at: finalApprovedAt.toISOString(),
       billing_cycle_ends_at: cycleEndsAt.toISOString(),
@@ -340,10 +377,16 @@ export async function POST(request: NextRequest) {
       updatePayload.billing_started_at = finalApprovedAt.toISOString();
     }
 
-    const { error: updateError } = await supabaseAdmin
+    console.log("[decorflow/webhook] updatePayload final:", updatePayload);
+
+    const { data: updatedCompany, error: updateError } = await supabaseAdmin
       .from("companies")
       .update(updatePayload)
-      .eq("id", companyId);
+      .eq("id", companyId)
+      .select(
+        "id, name, slug, plan, plan_status, active, billing_status, billing_started_at, billing_cycle_ends_at, billing_grace_ends_at, billing_last_event_at, last_payment_at"
+      )
+      .maybeSingle();
 
     if (updateError) {
       console.error("[decorflow/webhook] erro ao atualizar empresa:", updateError);
@@ -360,6 +403,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    console.log(
+      "[decorflow/webhook] empresa atualizada com sucesso:",
+      updatedCompany
+    );
+
     return NextResponse.json({
       ok: true,
       acknowledged: true,
@@ -374,6 +422,7 @@ export async function POST(request: NextRequest) {
       billing_started_at: updatePayload.billing_started_at ?? null,
       billing_cycle_ends_at: cycleEndsAt.toISOString(),
       billing_grace_ends_at: graceEndsAt.toISOString(),
+      company: updatedCompany,
     });
   } catch (error) {
     console.error("[decorflow/webhook] erro geral:", error);
