@@ -182,49 +182,48 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = getBaseUrl(request);
 
-    const successUrl = `${baseUrl}/dashboard/assinatura?payment=success`;
-    const pendingUrl = `${baseUrl}/dashboard/assinatura?payment=pending`;
-    const failureUrl = `${baseUrl}/dashboard/assinatura?payment=failure`;
+    const successUrl = `${baseUrl}/painel/assinatura?payment=success`;
+    const pendingUrl = `${baseUrl}/painel/assinatura?payment=pending`;
+    const failureUrl = `${baseUrl}/painel/assinatura?payment=failure`;
     const webhookUrl = `${baseUrl}/api/mercadopago/webhook`;
 
     const isLocal = isLocalhostUrl(baseUrl);
 
     const preference = new Preference(mp);
 
-const preferenceBody: any = {
-  items: [
-    {
-      id: `decorflow-${planId}`,
-      title: `${systemName} ${finalPlanLabel}`,
-      description: `Assinatura mensal ${systemName} - plano ${finalPlanLabel}`,
-      quantity: 1,
-      currency_id: "BRL",
-      unit_price: finalAmount,
-    },
-  ],
-  payer: userEmail ? { email: userEmail } : undefined,
-  back_urls: {
-    success: successUrl,
-    pending: pendingUrl,
-    failure: failureUrl,
-  },
-  external_reference: companyId,
-  metadata: {
-    checkout_type: "subscription",
-    system_name: systemName,
-    source,
-    company_id: companyId,
-    company_name: companyName,
-    plan_id: planId,
-    plan_label: finalPlanLabel,
-    amount: finalAmount,
-    billing_cycle: billingCycle,
-  },
-  notification_url: webhookUrl,
-  statement_descriptor: "DECORFLOW",
-};
+    const preferenceBody: any = {
+      items: [
+        {
+          id: `decorflow-${planId}`,
+          title: `${systemName} ${finalPlanLabel}`,
+          description: `Assinatura mensal ${systemName} - plano ${finalPlanLabel}`,
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: finalAmount,
+        },
+      ],
+      payer: userEmail ? { email: userEmail } : undefined,
+      back_urls: {
+        success: successUrl,
+        pending: pendingUrl,
+        failure: failureUrl,
+      },
+      external_reference: companyId,
+      metadata: {
+        checkout_type: "subscription",
+        system_name: systemName,
+        source,
+        company_id: companyId,
+        company_name: companyName,
+        plan_id: planId,
+        plan_label: finalPlanLabel,
+        amount: finalAmount,
+        billing_cycle: billingCycle,
+      },
+      notification_url: webhookUrl,
+      statement_descriptor: "DECORFLOW",
+    };
 
-    // Em localhost o Mercado Pago costuma rejeitar auto_return.
     if (!isLocal) {
       preferenceBody.auto_return = "approved";
     }
@@ -232,9 +231,9 @@ const preferenceBody: any = {
     console.log("[decorflow/create-checkout] baseUrl:", baseUrl);
     console.log("[decorflow/create-checkout] preferenceBody:", preferenceBody);
 
-        const result = await preference.create({
-        body: preferenceBody as any,
-        });
+    const result = await preference.create({
+      body: preferenceBody as any,
+    });
 
     return NextResponse.json({
       ok: true,

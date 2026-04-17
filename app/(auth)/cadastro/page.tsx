@@ -23,15 +23,16 @@ export default function CadastroPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
+const { error } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    emailRedirectTo: "https://www.decorflow.com.br/auth/callback",
+    data: {
+      full_name: fullName,
+    },
+  },
+});
 
     setLoading(false);
 

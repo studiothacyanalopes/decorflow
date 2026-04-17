@@ -90,14 +90,17 @@ function resolveSubscriptionContext(params: {
 }
 
 async function getMercadoPagoPayment(paymentId: string) {
-  const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${mpAccessToken}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `https://api.mercadopago.com/v1/payments/${paymentId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${mpAccessToken}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    }
+  );
 
   const data = await response.json().catch(() => null);
 
@@ -176,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     const { data: companyBefore, error: companyLookupError } = await supabaseAdmin
       .from("companies")
-      .select("id, plan, plan_status")
+      .select("id, plan, plan_status, active")
       .eq("id", companyId)
       .maybeSingle();
 
@@ -203,6 +206,7 @@ export async function POST(request: NextRequest) {
       plan: planId,
       plan_status: "active",
       billing_status: "active",
+      active: true,
       trial_ends_at: null,
       last_payment_at: finalApprovedAt.toISOString(),
       billing_last_event_at: finalApprovedAt.toISOString(),
