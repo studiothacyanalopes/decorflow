@@ -57,7 +57,7 @@ const PLANS: PlanConfig[] = [
   {
     id: "start",
     name: "Start",
-    price: 1,
+    price: 99.9,
     description:
       "Plano ideal para começar a operar com catálogo, pedidos, financeiro e equipe no DecorFlow.",
     limits: {
