@@ -1571,36 +1571,36 @@ const matchesSearch =
               }
             />
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setCategoryModalOpen(false);
-                  resetCategoryForm();
-                }}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                Cancelar
-              </button>
+<div className="flex gap-3 pt-2">
+  <button
+    type="button"
+    onClick={() => {
+      setCategoryModalOpen(false);
+      resetCategoryForm();
+    }}
+    className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+  >
+    Cancelar
+  </button>
 
-              <button
-                type="submit"
-                disabled={savingCategory}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
-              >
-                {savingCategory ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Salvar categoria
-                  </>
-                )}
-              </button>
-            </div>
+  <button
+    type="submit"
+    disabled={savingCategory}
+    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+  >
+    {savingCategory ? (
+      <>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Salvando...
+      </>
+    ) : (
+      <>
+        <Save className="h-4 w-4" />
+        Salvar categoria
+      </>
+    )}
+  </button>
+</div>
           </form>
         </ModalShell>
       ) : null}
@@ -2168,36 +2168,38 @@ const matchesSearch =
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setProductModalOpen(false);
-                  resetProductForm();
-                }}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                Cancelar
-              </button>
+<div className="mt-4 pb-[calc(env(safe-area-inset-bottom)+28px)]">
+  <div className="flex flex-col gap-3 sm:flex-row">
+    <button
+      type="button"
+      onClick={() => {
+        setProductModalOpen(false);
+        resetProductForm();
+      }}
+      className="inline-flex h-11 w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:flex-1"
+    >
+      Cancelar
+    </button>
 
-              <button
-                type="submit"
-                disabled={savingProduct}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
-              >
-                {savingProduct ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Salvar produto
-                  </>
-                )}
-              </button>
-            </div>
+    <button
+      type="submit"
+      disabled={savingProduct}
+      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60 sm:flex-1"
+    >
+      {savingProduct ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Salvando...
+        </>
+      ) : (
+        <>
+          <Save className="h-4 w-4" />
+          Salvar produto
+        </>
+      )}
+    </button>
+  </div>
+</div>
           </form>
         </ModalShell>
       ) : null}
@@ -2283,9 +2285,9 @@ function ModalShell({
           </button>
         </div>
 
-        <div className="max-h-[calc(92vh-88px)] overflow-y-auto px-6 py-6">
-          {children}
-        </div>
+<div className="max-h-[calc(92vh-88px)] overflow-y-auto px-4 pt-4 pb-24 sm:px-6 sm:pt-6 sm:pb-6">
+  {children}
+</div>
       </div>
     </div>
   );
