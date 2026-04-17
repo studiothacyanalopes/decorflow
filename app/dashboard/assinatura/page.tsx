@@ -82,7 +82,7 @@ const PLANS: PlanConfig[] = [
       {
         label: "Link de pagamento avançado",
         included: false,
-        helper: "fase futura",
+        helper: "",
       },
     ],
   },
@@ -117,7 +117,7 @@ const PLANS: PlanConfig[] = [
       {
         label: "Link de pagamento avançado",
         included: true,
-        helper: "fase futura",
+        helper: "",
       },
     ],
   },
@@ -145,17 +145,9 @@ const PLANS: PlanConfig[] = [
       { label: "Contrato padrão", included: true },
       { label: "Permissões por membro", included: true },
       { label: "Escala de equipe ilimitada", included: true },
-      { label: "Website", included: false, helper: "sob consulta" },
-      {
-        label: "Assinatura digital avançada",
-        included: false,
-        helper: "sob consulta",
-      },
-      {
-        label: "Link de pagamento avançado",
-        included: true,
-        helper: "fase futura",
-      },
+      { label: "Website", included: true },
+      { label: "Assinatura digital avançada", included: true },
+      { label: "Link de pagamento avançado", included: true },
     ],
   },
 ];
@@ -752,8 +744,7 @@ export default function DecorAssinaturaPage() {
                 </div>
 
                 <p className="mt-5 text-xs text-slate-400">
-                  Recursos marcados como fase futura, sob consulta ou avançados
-                  podem depender de evolução adicional do DecorFlow.
+                  DecorFlow - Soluções Digitais
                 </p>
               </div>
             </section>

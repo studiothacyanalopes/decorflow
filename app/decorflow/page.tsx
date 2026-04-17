@@ -137,9 +137,21 @@ const stats = [
   { label: "Operação", value: "Mais controle" },
 ];
 
+const segmentTickerStyles = `
+@keyframes scrollSegments {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+`;
+
 export default function DecorFlowLandingPage() {
   return (
     <main className="min-h-screen bg-[#f4f7fb] text-slate-900">
+        <style>{segmentTickerStyles}</style>
       <section className="relative overflow-hidden bg-[linear-gradient(180deg,#eef3f9_0%,#f7f9fc_55%,#f4f7fb_100%)]">
         <div className="absolute inset-0">
           <div className="absolute left-[-80px] top-[-80px] h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
@@ -148,61 +160,63 @@ export default function DecorFlowLandingPage() {
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 py-6 lg:px-8">
-          <header className="sticky top-4 z-30">
-            <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-5 py-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2f80ed] text-white shadow-md">
-                    <span className="text-sm font-bold">DF</span>
-                  </div>
+         <header className="fixed inset-x-0 top-0 z-50">
+  <div className="mx-auto max-w-7xl px-6 pt-6 lg:px-8">
+    <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-5 py-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2f80ed] text-white shadow-md">
+            <span className="text-sm font-bold">DF</span>
+          </div>
 
-                  <div>
-                    <p className="text-lg font-bold tracking-tight text-slate-900">DecorFlow</p>
-                    <p className="text-xs text-slate-500">by Web Division</p>
-                  </div>
-                </div>
+          <div>
+            <p className="text-lg font-bold tracking-tight text-slate-900">DecorFlow</p>
+            <p className="text-xs text-slate-500">by Web Division</p>
+          </div>
+        </div>
 
-                <nav className="hidden items-center gap-8 lg:flex">
-                  <a href="#beneficios" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
-                    Benefícios
-                  </a>
-                  <a href="#segmentos" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
-                    Segmentos
-                  </a>
-                  <a href="#como-funciona" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
-                    Como funciona
-                  </a>
-                  <a href="#planos" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
-                    Planos
-                  </a>
-                  <a href="#faq" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
-                    FAQ
-                  </a>
-                </nav>
+        <nav className="hidden items-center gap-8 lg:flex">
+          <a href="#beneficios" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
+            Benefícios
+          </a>
+          <a href="#segmentos" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
+            Segmentos
+          </a>
+          <a href="#como-funciona" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
+            Como funciona
+          </a>
+          <a href="#planos" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
+            Planos
+          </a>
+          <a href="#faq" className="text-sm font-medium text-slate-600 transition hover:text-[#2f80ed]">
+            FAQ
+          </a>
+        </nav>
 
-                <div className="flex items-center gap-3">
-                  <Link
-                    href="/login"
-                    className="hidden rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:inline-flex"
-                  >
-                    Entrar
-                  </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:inline-flex"
+          >
+            Entrar
+          </Link>
 
-                  <a
-                    href="https://wa.me/5562994693465?text=Ol%C3%A1%2C%20quero%20conhecer%20o%20DecorFlow."
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-[#2f80ed] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#1f6fdb]"
-                  >
-                    Falar no WhatsApp
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </header>
+          <a
+            href="https://wa.me/5562994693465?text=Ol%C3%A1%2C%20quero%20conhecer%20o%20DecorFlow."
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-[#2f80ed] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#1f6fdb]"
+          >
+            Falar no WhatsApp
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
 
-          <div className="grid items-center gap-14 pb-20 pt-12 lg:grid-cols-[1.02fr_0.98fr] lg:pb-24 lg:pt-16">
+          <div className="grid items-center gap-14 pb-20 pt-36 lg:grid-cols-[1.02fr_0.98fr] lg:pb-24 lg:pt-40">
             <div>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-2 text-sm font-medium text-[#2f80ed] shadow-sm">
                 <ShieldCheck className="h-4 w-4" />
@@ -421,16 +435,21 @@ export default function DecorFlowLandingPage() {
             </h2>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {segments.map((segment) => (
-              <div
-                key={segment}
-                className="rounded-[24px] border border-slate-200 bg-slate-50 px-5 py-5 text-center shadow-sm"
-              >
-                <p className="text-sm font-semibold text-slate-700">{segment}</p>
-              </div>
-            ))}
-          </div>
+<div className="relative mt-12 overflow-hidden">
+  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-white via-white/80 to-transparent" />
+  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-white via-white/80 to-transparent" />
+
+  <div className="flex w-max animate-[scrollSegments_24s_linear_infinite] gap-4 hover:[animation-play-state:paused]">
+    {[...segments, ...segments].map((segment, index) => (
+      <div
+        key={`${segment}-${index}`}
+        className="flex min-w-[260px] items-center justify-center rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_100%)] px-6 py-5 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#2f80ed]/40 hover:bg-[linear-gradient(180deg,#eef5ff_0%,#dbeafe_100%)] hover:shadow-[0_12px_30px_rgba(47,128,237,0.14)]"
+      >
+        <p className="text-sm font-semibold text-slate-700">{segment}</p>
+      </div>
+    ))}
+  </div>
+</div>
         </div>
       </section>
 

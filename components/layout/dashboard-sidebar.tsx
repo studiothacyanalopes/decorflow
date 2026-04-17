@@ -15,17 +15,16 @@ import {
   BarChart3,
   UserCog,
   Building2,
-  Settings,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   X,
-    CreditCard,
-
+  CreditCard,
+  Lock,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const menuItems = [
+const BASE_MENU_ITEMS = [
   { label: "Painel", href: "/dashboard", icon: LayoutDashboard },
   { label: "Pedidos", href: "/dashboard/pedidos", icon: ShoppingBag },
   { label: "Fluxo", href: "/dashboard/fluxo", icon: KanbanSquare },
@@ -44,6 +43,7 @@ type DashboardSidebarProps = {
   onToggleCollapse: () => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  isSubscriptionLocked?: boolean;
 };
 
 export function DashboardSidebar({
@@ -51,17 +51,24 @@ export function DashboardSidebar({
   onToggleCollapse,
   mobileOpen,
   onCloseMobile,
+  isSubscriptionLocked = false,
 }: DashboardSidebarProps) {
-  const pathname = usePathname();
-  const [companyName, setCompanyName] = useState("Minha empresa");
+const pathname = usePathname();
+const [companyName, setCompanyName] = useState("Minha empresa");
+const [isMasterUser, setIsMasterUser] = useState(false);
 
   useEffect(() => {
     async function loadCompanyName() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+const {
+  data: { user },
+} = await supabase.auth.getUser();
 
-      if (!user) return;
+if (!user) return;
+
+setIsMasterUser(
+  String(user.email || "").trim().toLowerCase() ===
+    "genesismatheusdsl@gmail.com"
+);
 
       const { data: membership } = await supabase
         .from("company_users")
@@ -84,6 +91,14 @@ export function DashboardSidebar({
 
     loadCompanyName();
   }, []);
+
+
+  const menuItems = isMasterUser
+  ? [
+      ...BASE_MENU_ITEMS,
+      { label: "Master", href: "/dashboard/master", icon: Crown },
+    ]
+  : BASE_MENU_ITEMS;
 
   return (
     <>
@@ -110,22 +125,23 @@ export function DashboardSidebar({
           <div
             className={cn(
               "flex items-center",
-              collapsed ? "justify-center w-full" : "gap-3"
+              collapsed ? "w-full justify-center" : "gap-3"
             )}
           >
             <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#020617_0%,#0f172a_45%,#1d4ed8_100%)] text-white shadow-[0_14px_30px_rgba(15,23,42,0.28)]">
               <span className="text-sm font-bold tracking-[0.08em]">DF</span>
               <div className="absolute inset-x-2 bottom-1 h-4 rounded-full bg-blue-400/20 blur-md" />
             </div>
+
             {!collapsed ? (
-            <div className="min-w-0">
+              <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400 dark:text-slate-500">
-                DecorFlow
+                  DecorFlow
                 </p>
                 <h2 className="truncate text-[15px] font-semibold text-slate-950 dark:text-slate-100">
-                {companyName}
+                  {companyName}
                 </h2>
-            </div>
+              </div>
             ) : null}
           </div>
 
@@ -139,14 +155,64 @@ export function DashboardSidebar({
           </button>
         </div>
 
+        {isSubscriptionLocked && !collapsed ? (
+          <div className="px-3 pt-3">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-amber-800 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+                  <Lock className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+                    Acesso bloqueado
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-amber-700">
+                    Os módulos ficam visíveis, mas apenas a aba Assinatura está
+                    liberada até a assinatura de um plano.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex-1 overflow-y-auto px-3 py-4">
-
-
           <nav className="space-y-1.5">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+              const isAssinatura = item.href === "/dashboard/assinatura";
+              const isDisabled = isSubscriptionLocked && !isAssinatura;
+
+              if (isDisabled) {
+                return (
+                  <div
+                    key={item.href}
+                    className={cn(
+                      "group relative flex cursor-not-allowed items-center rounded-2xl px-3 py-3 text-sm font-medium opacity-55 transition-all",
+                      collapsed ? "justify-center" : "gap-3",
+                      "border border-transparent bg-slate-100/80 text-slate-500 dark:bg-white/5 dark:text-slate-400"
+                    )}
+                    title={
+                      collapsed
+                        ? `${item.label} bloqueado até ativar o plano`
+                        : undefined
+                    }
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-slate-400" />
+
+                    {!collapsed ? <span>{item.label}</span> : null}
+
+                    {!collapsed ? (
+                      <div className="ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-white/10 dark:text-slate-400">
+                        <Lock className="h-3 w-3" />
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
 
               return (
                 <Link
@@ -196,17 +262,17 @@ export function DashboardSidebar({
                 </div>
               </div>
             ) : (
-<>
+              <>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-                    Empresa
+                  Empresa
                 </p>
                 <h3 className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-100">
-                    {companyName}
+                  {companyName}
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    Dados principais da sua empresa vinculada.
+                  Dados principais da sua empresa vinculada.
                 </p>
-                </>
+              </>
             )}
           </div>
         </div>

@@ -34,17 +34,24 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const router = useRouter();
 
-  const [darkMode, setDarkMode] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const [loggingOut, setLoggingOut] = useState(false);
+const [darkMode, setDarkMode] = useState(false);
+const [userMenuOpen, setUserMenuOpen] = useState(false);
+const [avatarUrl, setAvatarUrl] = useState<string>("");
+const [loggingOut, setLoggingOut] = useState(false);
+const [userName, setUserName] = useState("Usuário");
+const [userEmail, setUserEmail] = useState("");
+const [userRole, setUserRole] = useState("Administrador");
 
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+const menuRef = useRef<HTMLDivElement | null>(null);
+const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const userName = "genesis";
-  const userRole = "Administrador";
-  const userInitials = userName.slice(0, 2).toUpperCase();
+const userInitials = userName
+  .trim()
+  .split(" ")
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase() || "")
+  .join("") || "US";
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("decorflow-theme");
@@ -58,6 +65,51 @@ export function DashboardHeader({
     const storedAvatar = localStorage.getItem(AVATAR_STORAGE_KEY) || "";
     setAvatarUrl(storedAvatar);
   }, []);
+
+  useEffect(() => {
+  async function loadLoggedUser() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) return;
+
+    const email = String(user.email || "").trim();
+    setUserEmail(email);
+
+    const metadataName =
+      String(user.user_metadata?.name || "").trim() ||
+      String(user.user_metadata?.full_name || "").trim() ||
+      String(user.user_metadata?.display_name || "").trim();
+
+    const { data: membership } = await supabase
+      .from("company_users")
+      .select("role, custom_role, display_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const resolvedName =
+      String(membership?.display_name || "").trim() ||
+      metadataName ||
+      (email ? email.split("@")[0] : "Usuário");
+
+    const resolvedRole =
+      String(membership?.custom_role || "").trim() ||
+      (membership?.role === "owner"
+        ? "Owner"
+        : membership?.role === "admin"
+        ? "Administrador"
+        : membership?.role === "member"
+        ? "Membro"
+        : "Administrador");
+
+    setUserName(resolvedName);
+    setUserRole(resolvedRole);
+  }
+
+  loadLoggedUser();
+}, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -274,6 +326,9 @@ export function DashboardHeader({
                     </p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                       {userRole}
+                    </p>
+                    <p className="truncate text-[11px] text-slate-400 dark:text-slate-500">
+                      {userEmail || "—"}
                     </p>
                   </div>
                 </div>
