@@ -5,8 +5,10 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
+  Clock3,
   CreditCard,
   Loader2,
+  Lock,
   Shield,
   Sparkles,
   X,
@@ -22,8 +24,12 @@ type CompanyContext = {
   plan?: string | null;
   plan_status?: string | null;
   billing_status?: string | null;
+  billing_started_at?: string | null;
   billing_cycle_ends_at?: string | null;
-  trial_ends_at?: string | null;
+  billing_grace_ends_at?: string | null;
+  billing_last_event_at?: string | null;
+  last_payment_at?: string | null;
+  active?: boolean | null;
 };
 
 type StatusState = {
@@ -230,6 +236,14 @@ function cleanPaymentQueryParams() {
   window.history.replaceState({}, "", url.toString());
 }
 
+function formatDaysLabel(days: number | null) {
+  if (days === null) return "—";
+  if (days === 0) return "hoje";
+  if (days === 1) return "1 dia";
+  if (days < 0) return `${Math.abs(days)} dia(s) atrás`;
+  return `${days} dias`;
+}
+
 export default function DecorAssinaturaPage() {
   const [loading, setLoading] = useState(true);
   const [startingCheckout, setStartingCheckout] = useState<string | null>(null);
@@ -293,8 +307,12 @@ export default function DecorAssinaturaPage() {
         plan: companyData?.plan || null,
         plan_status: companyData?.plan_status || null,
         billing_status: companyData?.billing_status || null,
+        billing_started_at: companyData?.billing_started_at || null,
         billing_cycle_ends_at: companyData?.billing_cycle_ends_at || null,
-        trial_ends_at: companyData?.trial_ends_at || null,
+        billing_grace_ends_at: companyData?.billing_grace_ends_at || null,
+        billing_last_event_at: companyData?.billing_last_event_at || null,
+        last_payment_at: companyData?.last_payment_at || null,
+        active: companyData?.active ?? null,
       });
     } catch {
       setStatus({
@@ -488,6 +506,97 @@ export default function DecorAssinaturaPage() {
     return PLANS.find((item) => item.id === company?.plan) || null;
   }, [company?.plan]);
 
+  const now = new Date();
+
+  const cycleEndDate = useMemo(() => {
+    if (!company?.billing_cycle_ends_at) return null;
+    const date = new Date(company.billing_cycle_ends_at);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }, [company?.billing_cycle_ends_at]);
+
+  const graceEndDate = useMemo(() => {
+    if (!company?.billing_grace_ends_at) return null;
+    const date = new Date(company.billing_grace_ends_at);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }, [company?.billing_grace_ends_at]);
+
+  const hasPaidPlan = useMemo(() => {
+    return ["start", "pro", "enterprise"].includes(
+      String(company?.plan || "").toLowerCase()
+    );
+  }, [company?.plan]);
+
+  const daysUntilCycleEnd = useMemo(() => {
+    if (!cycleEndDate) return null;
+    return Math.ceil(
+      (cycleEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+  }, [cycleEndDate, now]);
+
+  const isWithinActiveCycle = Boolean(
+    hasPaidPlan && cycleEndDate && now <= cycleEndDate
+  );
+
+  const isNearExpiration = Boolean(
+    hasPaidPlan &&
+      cycleEndDate &&
+      daysUntilCycleEnd !== null &&
+      daysUntilCycleEnd <= 3 &&
+      daysUntilCycleEnd >= 0
+  );
+
+  const isExpired = Boolean(hasPaidPlan && cycleEndDate && now > cycleEndDate);
+
+  const isInGrace = Boolean(
+    hasPaidPlan &&
+      graceEndDate &&
+      cycleEndDate &&
+      now > cycleEndDate &&
+      now <= graceEndDate
+  );
+
+  const isBlocked = Boolean(
+    company?.billing_status === "blocked" ||
+      company?.plan_status === "blocked" ||
+      (hasPaidPlan && graceEndDate && now > graceEndDate)
+  );
+
+  const canRenewOrChangeNow = Boolean(
+    !hasPaidPlan || isExpired || isInGrace || isBlocked
+  );
+
+  const headerBillingTone = isBlocked
+    ? "danger"
+    : isInGrace || isExpired
+      ? "warning"
+      : isNearExpiration
+        ? "attention"
+        : "normal";
+
+  const billingHeadline = isBlocked
+    ? "Plano bloqueado por falta de renovação"
+    : isInGrace
+      ? "Seu plano está em carência"
+      : isExpired
+        ? "Seu ciclo venceu e a renovação já está liberada"
+        : isNearExpiration
+          ? `Seu plano vence em ${formatDaysLabel(daysUntilCycleEnd)}`
+          : hasPaidPlan && daysUntilCycleEnd !== null
+            ? `Plano ativo. Próximo vencimento em ${formatDaysLabel(daysUntilCycleEnd)}`
+            : "Escolha o plano ideal para a sua operação e ative a assinatura mensal pelo Mercado Pago.";
+
+  const billingSubheadline = isBlocked
+    ? "Renove o plano para reativar o acesso completo e manter a operação liberada no DecorFlow."
+    : isInGrace
+      ? "Sua renovação já está liberada. Evite bloqueio e mantenha o acesso completo sem interrupções."
+      : isExpired
+        ? "Seu período de cobrança já encerrou. Agora você já pode renovar o plano atual ou migrar para outro plano."
+        : isNearExpiration
+          ? "Seu ciclo está perto do fim. Assim que vencer, a renovação será liberada automaticamente."
+          : hasPaidPlan && !canRenewOrChangeNow
+            ? "Enquanto o ciclo atual estiver ativo, a renovação e a troca de plano permanecem bloqueadas."
+            : "Selecione o plano ideal para a sua operação e ative a assinatura mensal pelo Mercado Pago.";
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#f6f8fc] px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
@@ -505,8 +614,26 @@ export default function DecorAssinaturaPage() {
         <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
           <div className="border-b border-slate-200 px-5 py-6 sm:px-6 lg:px-7">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-700">
+              <div className="min-w-0">
+                <div
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${
+                    headerBillingTone === "danger"
+                      ? "border border-rose-200 bg-rose-50 text-rose-700"
+                      : headerBillingTone === "warning"
+                        ? "border border-amber-200 bg-amber-50 text-amber-700"
+                        : headerBillingTone === "attention"
+                          ? "border border-yellow-200 bg-yellow-50 text-yellow-700"
+                          : "border border-blue-100 bg-blue-50 text-blue-700"
+                  }`}
+                >
+                  {headerBillingTone === "danger" ? (
+                    <Lock className="h-3.5 w-3.5" />
+                  ) : headerBillingTone === "warning" ||
+                    headerBillingTone === "attention" ? (
+                    <AlertCircle className="h-3.5 w-3.5" />
+                  ) : (
+                    <Shield className="h-3.5 w-3.5" />
+                  )}
                   DecorFlow
                 </div>
 
@@ -515,8 +642,7 @@ export default function DecorAssinaturaPage() {
                 </h1>
 
                 <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-500">
-                  Escolha o plano ideal para a sua operação e ative a assinatura
-                  mensal pelo Mercado Pago.
+                  {billingSubheadline}
                 </p>
               </div>
 
@@ -525,6 +651,49 @@ export default function DecorAssinaturaPage() {
                 <p>{company?.name || "Minha empresa"}</p>
               </div>
             </div>
+
+            {hasPaidPlan ? (
+              <div
+                className={`mt-5 rounded-[22px] border px-4 py-4 ${
+                  headerBillingTone === "danger"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : headerBillingTone === "warning"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : headerBillingTone === "attention"
+                        ? "border-yellow-200 bg-yellow-50 text-yellow-700"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                } ${headerBillingTone !== "normal" ? "animate-pulse" : ""}`}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    {headerBillingTone === "danger" ? (
+                      <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+                    ) : headerBillingTone === "warning" ||
+                      headerBillingTone === "attention" ? (
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{billingHeadline}</p>
+                      <p className="mt-1 text-sm opacity-90">
+                        {billingSubheadline}
+                      </p>
+                    </div>
+                  </div>
+
+                  {daysUntilCycleEnd !== null ? (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-current/20 bg-white/60 px-3 py-1 text-xs font-semibold">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {daysUntilCycleEnd >= 0
+                        ? `Faltam ${formatDaysLabel(daysUntilCycleEnd)}`
+                        : `Venceu há ${formatDaysLabel(daysUntilCycleEnd)}`}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             {confirmingPayment ? (
               <div className="mt-5 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -591,6 +760,15 @@ export default function DecorAssinaturaPage() {
 
                   <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Início da cobrança
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatDateTime(company?.billing_started_at)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Próximo ciclo / vencimento
                     </p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">
@@ -600,10 +778,28 @@ export default function DecorAssinaturaPage() {
 
                   <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Trial até
+                      Fim da carência
                     </p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatDateTime(company?.trial_ends_at)}
+                      {formatDateTime(company?.billing_grace_ends_at)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Último pagamento
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatDateTime(company?.last_payment_at)}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Último evento de billing
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatDateTime(company?.billing_last_event_at)}
                     </p>
                   </div>
 
@@ -636,17 +832,39 @@ export default function DecorAssinaturaPage() {
                       </div>
                     </div>
                   ) : null}
+
+                  {hasPaidPlan ? (
+                    <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-semibold text-slate-900">
+                        Liberação para renovar ou trocar
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                        {canRenewOrChangeNow
+                          ? "Sua renovação já está liberada. Você pode renovar o plano atual ou migrar para outro plano."
+                          : "Seu ciclo atual ainda está ativo. A renovação e a troca de plano ficam bloqueadas até o vencimento dos 30 dias."}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </aside>
 
             <section className="min-w-0 bg-white p-4 sm:p-5 lg:p-6">
               <div className="rounded-[26px] border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-slate-700" />
-                  <h2 className="text-base font-semibold text-slate-950">
-                    Selecione o plano que deseja
-                  </h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-slate-700" />
+                    <h2 className="text-base font-semibold text-slate-950">
+                      Selecione o plano que deseja
+                    </h2>
+                  </div>
+
+                  {hasPaidPlan && !canRenewOrChangeNow ? (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                      <Lock className="h-3.5 w-3.5" />
+                      Mudanças liberadas apenas após o vencimento
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mt-5 grid gap-4 xl:grid-cols-3">
@@ -654,6 +872,19 @@ export default function DecorAssinaturaPage() {
                     const isCurrent = company?.plan === plan.id;
                     const isBusy =
                       startingCheckout === plan.id || confirmingPayment;
+
+                    const isLockedByCycle =
+                      hasPaidPlan && !canRenewOrChangeNow;
+
+                    const isDisabled = isBusy || isLockedByCycle;
+
+                    const buttonLabel = isCurrent
+                      ? canRenewOrChangeNow
+                        ? "Renovar plano"
+                        : "Plano ativo"
+                      : hasPaidPlan && !canRenewOrChangeNow
+                        ? "Mudança bloqueada"
+                        : "Assinar agora";
 
                     return (
                       <div
@@ -725,18 +956,31 @@ export default function DecorAssinaturaPage() {
                           ))}
                         </div>
 
+                        {hasPaidPlan && !canRenewOrChangeNow ? (
+                          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs leading-5 text-slate-500">
+                            Enquanto o ciclo atual estiver ativo, a renovação e a troca
+                            de plano ficam bloqueadas.
+                          </div>
+                        ) : null}
+
                         <button
                           type="button"
                           onClick={() => handleStartCheckout(plan)}
-                          disabled={isBusy}
-                          className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={isDisabled}
+                          className={`mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold text-white transition ${
+                            isDisabled
+                              ? "cursor-not-allowed bg-slate-300 shadow-none"
+                              : "bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] shadow-[0_12px_30px_rgba(79,70,229,0.28)] hover:-translate-y-0.5"
+                          }`}
                         >
                           {startingCheckout === plan.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isDisabled ? (
+                            <Lock className="h-4 w-4" />
                           ) : (
                             <CreditCard className="h-4 w-4" />
                           )}
-                          {isCurrent ? "Renovar / alterar plano" : "Assinar agora"}
+                          {buttonLabel}
                         </button>
                       </div>
                     );
