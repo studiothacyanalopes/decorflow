@@ -22,13 +22,8 @@ type CompanyContext = {
   plan?: string | null;
   plan_status?: string | null;
   billing_status?: string | null;
-  billing_started_at?: string | null;
   billing_cycle_ends_at?: string | null;
-  billing_grace_ends_at?: string | null;
-  billing_last_event_at?: string | null;
-  last_payment_at?: string | null;
   trial_ends_at?: string | null;
-  active?: boolean | null;
 };
 
 type StatusState = {
@@ -62,7 +57,7 @@ const PLANS: PlanConfig[] = [
   {
     id: "start",
     name: "Start",
-    price: 1,
+    price: 99.9,
     description:
       "Plano ideal para começar a operar com catálogo, pedidos, financeiro e equipe no DecorFlow.",
     limits: {
@@ -298,13 +293,8 @@ export default function DecorAssinaturaPage() {
         plan: companyData?.plan || null,
         plan_status: companyData?.plan_status || null,
         billing_status: companyData?.billing_status || null,
-        billing_started_at: companyData?.billing_started_at || null,
         billing_cycle_ends_at: companyData?.billing_cycle_ends_at || null,
-        billing_grace_ends_at: companyData?.billing_grace_ends_at || null,
-        billing_last_event_at: companyData?.billing_last_event_at || null,
-        last_payment_at: companyData?.last_payment_at || null,
         trial_ends_at: companyData?.trial_ends_at || null,
-        active: companyData?.active ?? null,
       });
     } catch {
       setStatus({
@@ -601,55 +591,10 @@ export default function DecorAssinaturaPage() {
 
                   <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Ativa no sistema
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {company?.active ? "Sim" : "Não"}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Início da cobrança
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatDateTime(company?.billing_started_at)}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Próximo ciclo / vencimento
                     </p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">
                       {formatDateTime(company?.billing_cycle_ends_at)}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Fim da carência
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatDateTime(company?.billing_grace_ends_at)}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Último pagamento
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatDateTime(company?.last_payment_at)}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Último evento de billing
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatDateTime(company?.billing_last_event_at)}
                     </p>
                   </div>
 
