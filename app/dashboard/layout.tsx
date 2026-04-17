@@ -11,53 +11,31 @@ import { supabase } from "@/lib/supabase";
 type CompanyAccessContext = {
   plan?: string | null;
   plan_status?: string | null;
-  billing_status?: string | null;
-  billing_cycle_ends_at?: string | null;
+  active?: boolean | null;
 };
 
 const PAID_PLANS = new Set(["start", "pro", "enterprise"]);
-const ACTIVE_BILLING_STATUSES = new Set([
-  "active",
-  "approved",
-  "paid",
-  "authorized",
-  "in_payment",
-  "cobrança em dia",
-]);
-
-function isDateValid(value?: string | null) {
-  if (!value) return false;
-  const date = new Date(value);
-  return !Number.isNaN(date.getTime());
-}
 
 function isSubscriptionActive(company: CompanyAccessContext | null) {
   if (!company) return false;
 
   const plan = (company.plan || "").toLowerCase().trim();
-  const billingStatus = (company.billing_status || "").toLowerCase().trim();
   const planStatus = (company.plan_status || "").toLowerCase().trim();
+  const isActive = company.active === true;
 
   if (!PAID_PLANS.has(plan)) {
     return false;
   }
 
-  if (planStatus.includes("free") || planStatus.includes("trial")) {
+  if (planStatus !== "active") {
     return false;
   }
 
-  if (billingStatus && !ACTIVE_BILLING_STATUSES.has(billingStatus)) {
+  if (!isActive) {
     return false;
   }
 
-  if (!isDateValid(company.billing_cycle_ends_at)) {
-    return false;
-  }
-
-  const cycleEnd = new Date(company.billing_cycle_ends_at as string);
-  const now = new Date();
-
-  return cycleEnd.getTime() > now.getTime();
+  return true;
 }
 
 export default function DashboardLayout({
@@ -116,13 +94,11 @@ if (isMasterRoute && !isMasterUser) {
   return;
 }
 
-        const { data: membership, error: membershipError } = await supabase
-          .from("company_users")
-          .select(
-            "company_id, companies:company_id(plan, plan_status, billing_status, billing_cycle_ends_at)"
-          )
-          .eq("user_id", user.id)
-          .maybeSingle();
+const { data: membership, error: membershipError } = await supabase
+  .from("company_users")
+  .select("company_id, companies:company_id(plan, plan_status, active)")
+  .eq("user_id", user.id)
+  .maybeSingle();
 
         if (membershipError || !membership?.company_id) {
           if (!mounted) return;
