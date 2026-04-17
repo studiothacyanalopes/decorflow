@@ -25,6 +25,10 @@ function safeNumber(value: number | null | undefined) {
   return Number(value || 0);
 }
 
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -127,137 +131,175 @@ export async function POST(request: Request) {
     const categories = categoriesRes.data || [];
     const subcategories = subcategoriesRes.data || [];
 
-    const mapped = companies.map((company: any) => {
-      const companyId = company.id;
+    const mapped = await Promise.all(
+      companies.map(async (company: any) => {
+        const companyId = company.id;
 
-      const companyUsersList = companyUsers.filter(
-        (item: any) => item.company_id === companyId
-      );
+        const companyUsersList = companyUsers.filter(
+          (item: any) => item.company_id === companyId
+        );
 
-      const companyOrders = orders.filter((item: any) => item.company_id === companyId);
-      const companyProducts = products.filter((item: any) => item.company_id === companyId);
-      const companyCategories = categories.filter((item: any) => item.company_id === companyId);
-      const companySubcategories = subcategories.filter((item: any) => item.company_id === companyId);
+        const companyOrders = orders.filter((item: any) => item.company_id === companyId);
+        const companyProducts = products.filter((item: any) => item.company_id === companyId);
+        const companyCategories = categories.filter((item: any) => item.company_id === companyId);
+        const companySubcategories = subcategories.filter((item: any) => item.company_id === companyId);
 
-      const clientSet = new Set<string>();
+        const clientSet = new Set<string>();
 
-      companyOrders.forEach((order: any) => {
-        const phone = normalizePhone(order.client_phone);
-        const name = normalizeText(order.client_name);
-        const key = phone || name || order.id;
-        clientSet.add(key);
-      });
+        companyOrders.forEach((order: any) => {
+          const phone = normalizePhone(order.client_phone);
+          const name = normalizeText(order.client_name);
+          const key = phone || name || order.id;
+          clientSet.add(key);
+        });
 
-      const grossRevenue = companyOrders.reduce(
-        (acc: number, item: any) => acc + safeNumber(item.total_amount),
-        0
-      );
+        const grossRevenue = companyOrders.reduce(
+          (acc: number, item: any) => acc + safeNumber(item.total_amount),
+          0
+        );
 
-      const extraCosts = companyOrders.reduce(
-        (acc: number, item: any) => acc + safeNumber(item.extra_cost_total),
-        0
-      );
+        const extraCosts = companyOrders.reduce(
+          (acc: number, item: any) => acc + safeNumber(item.extra_cost_total),
+          0
+        );
 
-      const estimatedProfit = grossRevenue - extraCosts;
-      const ordersCount = companyOrders.length;
-      const completedOrdersCount = companyOrders.filter(
-        (item: any) => normalizeText(item.order_status) === "completed"
-      ).length;
+        const estimatedProfit = grossRevenue - extraCosts;
+        const ordersCount = companyOrders.length;
 
-      const cancelledOrdersCount = companyOrders.filter(
-        (item: any) => normalizeText(item.order_status) === "cancelled"
-      ).length;
+        const completedOrdersCount = companyOrders.filter(
+          (item: any) => normalizeText(item.order_status) === "completed"
+        ).length;
 
-      const activeUsersCount = companyUsersList.filter((item: any) =>
-        ["active", "accepted"].includes(
-          normalizeText(item.member_status || item.status)
-        )
-      ).length;
+        const cancelledOrdersCount = companyOrders.filter(
+          (item: any) => normalizeText(item.order_status) === "cancelled"
+        ).length;
 
-      const activeProductsCount = companyProducts.filter(
-        (item: any) => item.is_active !== false
-      ).length;
+        const activeUsersCount = companyUsersList.filter((item: any) =>
+          ["active", "accepted"].includes(
+            normalizeText(item.member_status || item.status)
+          )
+        ).length;
 
-      const featuredProductsCount = companyProducts.filter(
-        (item: any) => item.is_featured === true
-      ).length;
+        const activeProductsCount = companyProducts.filter(
+          (item: any) => item.is_active !== false
+        ).length;
 
-      const owners = companyUsersList.filter(
-        (item: any) => normalizeText(item.role) === "owner"
-      );
+        const featuredProductsCount = companyProducts.filter(
+          (item: any) => item.is_featured === true
+        ).length;
 
-      const ownerNames = owners
-        .map((item: any) => item.display_name || item.invite_email || "")
-        .filter(Boolean);
+        const owners = companyUsersList.filter(
+          (item: any) => normalizeText(item.role) === "owner"
+        );
 
-      const ownerEmails = owners
-        .map((item: any) => item.invite_email || "")
-        .filter(Boolean);
+        const ownerUserIds = uniqueStrings([
+          ...owners.map((item: any) => item.user_id),
+          company.created_by,
+        ]);
 
-      const lastOrderAt =
-        companyOrders
-          .map((item: any) => item.updated_at || item.created_at)
-          .filter(Boolean)
-          .sort()
-          .reverse()[0] || null;
+        const authOwnerProfiles = await Promise.all(
+          ownerUserIds.map(async (userId) => {
+            try {
+              const { data, error } = await admin.auth.admin.getUserById(userId);
 
-      return {
-        id: company.id,
-        name: company.name || "Empresa sem nome",
-        slug: company.slug || "—",
-        email: company.email || "",
-        phone: company.phone || "",
-        document: company.document || "",
-        businessType: company.business_type || "",
-        createdAt: company.created_at,
-        updatedAt: company.updated_at,
-        plan: company.plan || "free",
-        planStatus: company.plan_status || "trial",
-        active: company.active ?? true,
-        maxUsers: Number(company.max_users || 1),
-        ownerNames,
-        ownerEmails,
-        instagram: company.instagram || "",
-        whatsapp: company.whatsapp || "",
-        emailPublico: company.email_publico || "",
-        addressLine: company.address_line || "",
-        addressNumber: company.address_number || "",
-        addressComplement: company.address_complement || "",
-        neighborhood: company.neighborhood || "",
-        city: company.city || "",
-        state: company.state || "",
-        zipCode: company.zip_code || "",
-        publicDescription: company.public_description || "",
-        publicLogoUrl: company.public_logo_url || "",
-        publicCoverUrl: company.public_cover_url || "",
-        publicLinkEnabled: company.public_link_enabled ?? false,
-        publicLinkTitle: company.public_link_title || "",
-        publicLinkSubtitle: company.public_link_subtitle || "",
-        businessHours: company.business_hours || "",
-        mapsLink: company.maps_link || "",
-        deliveryEnabled: company.delivery_enabled ?? false,
-        deliveryPricePerKm: Number(company.delivery_price_per_km || 0),
-        deliveryMinimumFee: Number(company.delivery_minimum_fee || 0),
-        deliveryRoundTripMultiplier: Number(company.delivery_round_trip_multiplier || 0),
-        deliveryMaxDistanceKm: Number(company.delivery_max_distance_km || 0),
-        usersCount: companyUsersList.length,
-        activeUsersCount,
-        ordersCount,
-        completedOrdersCount,
-        cancelledOrdersCount,
-        clientsCount: clientSet.size,
-        productsCount: companyProducts.length,
-        activeProductsCount,
-        featuredProductsCount,
-        categoriesCount: companyCategories.length,
-        subcategoriesCount: companySubcategories.length,
-        grossRevenue,
-        extraCosts,
-        estimatedProfit,
-        averageTicket: ordersCount > 0 ? grossRevenue / ordersCount : 0,
-        lastOrderAt,
-      };
-    });
+              if (error || !data?.user) {
+                return null;
+              }
+
+              const authUser = data.user;
+
+              return {
+                userId,
+                fullName:
+                  String(
+                    authUser.user_metadata?.full_name ||
+                      authUser.user_metadata?.name ||
+                      ""
+                  ).trim(),
+                email: String(authUser.email || "").trim(),
+              };
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        const ownerNames = uniqueStrings([
+          ...owners.map((item: any) => item.display_name),
+          ...owners.map((item: any) => item.invite_email),
+          ...authOwnerProfiles.map((item) => item?.fullName),
+        ]);
+
+        const ownerEmails = uniqueStrings([
+          ...owners.map((item: any) => item.invite_email),
+          ...authOwnerProfiles.map((item) => item?.email),
+        ]);
+
+        const lastOrderAt =
+          companyOrders
+            .map((item: any) => item.updated_at || item.created_at)
+            .filter(Boolean)
+            .sort()
+            .reverse()[0] || null;
+
+        return {
+          id: company.id,
+          name: company.name || "Empresa sem nome",
+          slug: company.slug || "—",
+          email: company.email || "",
+          phone: company.phone || "",
+          document: company.document || "",
+          businessType: company.business_type || "",
+          createdAt: company.created_at,
+          updatedAt: company.updated_at,
+          plan: company.plan || "free",
+          planStatus: company.plan_status || "trial",
+          active: company.active ?? true,
+          maxUsers: Number(company.max_users || 1),
+          ownerNames,
+          ownerEmails,
+          instagram: company.instagram || "",
+          whatsapp: company.whatsapp || "",
+          emailPublico: company.email_publico || "",
+          addressLine: company.address_line || "",
+          addressNumber: company.address_number || "",
+          addressComplement: company.address_complement || "",
+          neighborhood: company.neighborhood || "",
+          city: company.city || "",
+          state: company.state || "",
+          zipCode: company.zip_code || "",
+          publicDescription: company.public_description || "",
+          publicLogoUrl: company.public_logo_url || "",
+          publicCoverUrl: company.public_cover_url || "",
+          publicLinkEnabled: company.public_link_enabled ?? false,
+          publicLinkTitle: company.public_link_title || "",
+          publicLinkSubtitle: company.public_link_subtitle || "",
+          businessHours: company.business_hours || "",
+          mapsLink: company.maps_link || "",
+          deliveryEnabled: company.delivery_enabled ?? false,
+          deliveryPricePerKm: Number(company.delivery_price_per_km || 0),
+          deliveryMinimumFee: Number(company.delivery_minimum_fee || 0),
+          deliveryRoundTripMultiplier: Number(company.delivery_round_trip_multiplier || 0),
+          deliveryMaxDistanceKm: Number(company.delivery_max_distance_km || 0),
+          usersCount: companyUsersList.length,
+          activeUsersCount,
+          ordersCount,
+          completedOrdersCount,
+          cancelledOrdersCount,
+          clientsCount: clientSet.size,
+          productsCount: companyProducts.length,
+          activeProductsCount,
+          featuredProductsCount,
+          categoriesCount: companyCategories.length,
+          subcategoriesCount: companySubcategories.length,
+          grossRevenue,
+          extraCosts,
+          estimatedProfit,
+          averageTicket: ordersCount > 0 ? grossRevenue / ordersCount : 0,
+          lastOrderAt,
+        };
+      })
+    );
 
     return NextResponse.json({
       ok: true,

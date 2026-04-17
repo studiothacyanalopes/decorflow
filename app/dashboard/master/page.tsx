@@ -185,7 +185,9 @@ function Badge({
   };
 
   return (
-    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${map[tone]}`}>
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${map[tone]}`}
+    >
       {text}
     </span>
   );
@@ -215,6 +217,9 @@ export default function DecorMasterPage() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [sessionEmail, setSessionEmail] = useState("");
   const [companies, setCompanies] = useState<CompanyMasterCard[]>([]);
+  const [selectedCompany, setSelectedCompany] =
+    useState<CompanyMasterCard | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [savingCompanyId, setSavingCompanyId] = useState<string | null>(null);
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
@@ -434,17 +439,31 @@ export default function DecorMasterPage() {
 
   const summary = useMemo(() => {
     const totalCompanies = companies.length;
-    const freeCount = companies.filter((item) => normalizeText(item.plan) === "free").length;
-    const startCount = companies.filter((item) => normalizeText(item.plan) === "start").length;
-    const proCount = companies.filter((item) => normalizeText(item.plan) === "pro").length;
-    const enterpriseCount = companies.filter((item) => normalizeText(item.plan) === "enterprise").length;
+    const freeCount = companies.filter(
+      (item) => normalizeText(item.plan) === "free"
+    ).length;
+    const startCount = companies.filter(
+      (item) => normalizeText(item.plan) === "start"
+    ).length;
+    const proCount = companies.filter(
+      (item) => normalizeText(item.plan) === "pro"
+    ).length;
+    const enterpriseCount = companies.filter(
+      (item) => normalizeText(item.plan) === "enterprise"
+    ).length;
 
     const totalOrders = companies.reduce((acc, item) => acc + item.ordersCount, 0);
     const totalClients = companies.reduce((acc, item) => acc + item.clientsCount, 0);
     const totalRevenue = companies.reduce((acc, item) => acc + item.grossRevenue, 0);
     const totalCosts = companies.reduce((acc, item) => acc + item.extraCosts, 0);
-    const totalProfit = companies.reduce((acc, item) => acc + item.estimatedProfit, 0);
-    const totalProducts = companies.reduce((acc, item) => acc + item.productsCount, 0);
+    const totalProfit = companies.reduce(
+      (acc, item) => acc + item.estimatedProfit,
+      0
+    );
+    const totalProducts = companies.reduce(
+      (acc, item) => acc + item.productsCount,
+      0
+    );
 
     return {
       totalCompanies,
@@ -623,7 +642,9 @@ export default function DecorMasterPage() {
 
                 const publicUrl =
                   company.slug && company.slug !== "—"
-                    ? `${typeof window !== "undefined" ? window.location.origin : ""}/empresa/${company.slug}`
+                    ? `${
+                        typeof window !== "undefined" ? window.location.origin : ""
+                      }/empresa/${company.slug}`
                     : "";
 
                 return (
@@ -638,8 +659,14 @@ export default function DecorMasterPage() {
                             {company.name}
                           </h3>
                           <Badge text={company.plan} tone={planTone(company.plan)} />
-                          <Badge text={company.planStatus} tone={statusTone(company.planStatus)} />
-                          <Badge text={company.active ? "ativa" : "inativa"} tone={company.active ? "emerald" : "rose"} />
+                          <Badge
+                            text={company.planStatus}
+                            tone={statusTone(company.planStatus)}
+                          />
+                          <Badge
+                            text={company.active ? "ativa" : "inativa"}
+                            tone={company.active ? "emerald" : "rose"}
+                          />
                         </div>
 
                         <p className="mt-2 text-sm text-slate-500">
@@ -648,7 +675,8 @@ export default function DecorMasterPage() {
 
                         <p className="mt-1 text-sm text-slate-500">
                           Slug: <strong>{company.slug}</strong> · Criada em{" "}
-                          <strong>{formatDateTime(company.createdAt)}</strong> · Atualizada em{" "}
+                          <strong>{formatDateTime(company.createdAt)}</strong> ·
+                          Atualizada em{" "}
                           <strong>{formatDateTime(company.updatedAt)}</strong>
                         </p>
 
@@ -676,97 +704,105 @@ export default function DecorMasterPage() {
                         <Badge text={`Ativos: ${company.activeUsersCount}`} tone="emerald" />
                         <Badge text={`Clientes: ${company.clientsCount}`} tone="blue" />
                         <Badge text={`Pedidos: ${company.ordersCount}`} tone="blue" />
-                        <Badge text={`Concluídos: ${company.completedOrdersCount}`} tone="emerald" />
-                        <Badge text={`Cancelados: ${company.cancelledOrdersCount}`} tone="rose" />
+                        <Badge
+                          text={`Concluídos: ${company.completedOrdersCount}`}
+                          tone="emerald"
+                        />
+                        <Badge
+                          text={`Cancelados: ${company.cancelledOrdersCount}`}
+                          tone="rose"
+                        />
                       </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                       <MiniStat label="Produtos" value={String(company.productsCount)} />
-                      <MiniStat label="Produtos ativos" value={String(company.activeProductsCount)} />
-                      <MiniStat label="Destaques" value={String(company.featuredProductsCount)} />
-                      <MiniStat label="Categorias" value={String(company.categoriesCount)} />
-                      <MiniStat label="Subcategorias" value={String(company.subcategoriesCount)} />
-                      <MiniStat label="Ticket médio" value={formatCurrency(company.averageTicket)} />
+                      <MiniStat
+                        label="Produtos ativos"
+                        value={String(company.activeProductsCount)}
+                      />
+                      <MiniStat
+                        label="Destaques"
+                        value={String(company.featuredProductsCount)}
+                      />
+                      <MiniStat
+                        label="Categorias"
+                        value={String(company.categoriesCount)}
+                      />
+                      <MiniStat
+                        label="Subcategorias"
+                        value={String(company.subcategoriesCount)}
+                      />
+                      <MiniStat
+                        label="Ticket médio"
+                        value={formatCurrency(company.averageTicket)}
+                      />
                     </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
                       <MiniMoney label="Faturamento" value={company.grossRevenue} />
                       <MiniMoney label="Custos extras" value={company.extraCosts} />
-                      <MiniMoney label="Lucro estimado" value={company.estimatedProfit} />
-                    </div>
-
-                    <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                      <InfoPanel
-                        title="Informações da empresa"
-                        rows={[
-                          { label: "Tipo de negócio", value: company.businessType || "—" },
-                          { label: "Documento", value: company.document || "—" },
-                          { label: "E-mail interno", value: company.email || "—" },
-                          { label: "Telefone", value: company.phone || "—" },
-                          { label: "Instagram", value: company.instagram || "—" },
-                          { label: "WhatsApp", value: company.whatsapp || "—" },
-                          { label: "E-mail público", value: company.emailPublico || "—" },
-                          { label: "Link público", value: company.publicLinkEnabled ? "Ativo" : "Inativo" },
-                        ]}
-                      />
-
-                      <InfoPanel
-                        title="Catálogo / entrega / presença"
-                        rows={[
-                          { label: "Título público", value: company.publicLinkTitle || "—" },
-                          { label: "Subtítulo público", value: company.publicLinkSubtitle || "—" },
-                          { label: "Horário", value: company.businessHours || "—" },
-                          { label: "Entrega", value: company.deliveryEnabled ? "Ativa" : "Inativa" },
-                          { label: "Valor por km", value: formatCurrency(company.deliveryPricePerKm) },
-                          { label: "Frete mínimo", value: formatCurrency(company.deliveryMinimumFee) },
-                          { label: "Multiplicador ida/volta", value: String(company.deliveryRoundTripMultiplier || 0) },
-                          { label: "Distância máxima", value: `${company.deliveryMaxDistanceKm || 0} km` },
-                        ]}
+                      <MiniMoney
+                        label="Lucro estimado"
+                        value={company.estimatedProfit}
                       />
                     </div>
 
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-slate-400" />
-                          <span>
-                            Endereço: <strong className="text-slate-900">{buildAddress(company) || "—"}</strong>
-                          </span>
+                      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="min-w-0">
+                          <span className="text-slate-400">Tipo:</span>{" "}
+                          <strong className="text-slate-900">
+                            {company.businessType || "—"}
+                          </strong>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-slate-400" />
-                          <span>
-                            Página pública:{" "}
-                            <strong className="text-slate-900">
-                              {publicUrl || "—"}
-                            </strong>
-                          </span>
+                        <div className="min-w-0">
+                          <span className="text-slate-400">WhatsApp:</span>{" "}
+                          <strong className="break-all text-slate-900">
+                            {company.whatsapp || "—"}
+                          </strong>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-slate-400" />
-                          <span>
-                            Última atividade operacional:{" "}
-                            <strong className="text-slate-900">
-                              {formatDateTime(company.lastOrderAt)}
-                            </strong>
-                          </span>
+                        <div className="min-w-0">
+                          <span className="text-slate-400">Instagram:</span>{" "}
+                          <strong className="break-all text-slate-900">
+                            {company.instagram || "—"}
+                          </strong>
                         </div>
+
+                        <div className="min-w-0">
+                          <span className="text-slate-400">Última atividade:</span>{" "}
+                          <strong className="text-slate-900">
+                            {formatDateTime(company.lastOrderAt)}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCompany(company);
+                            setDetailsOpen(true);
+                          }}
+                          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                          Ver mais informações
+                        </button>
+
+                        {publicUrl ? (
+                          <a
+                            href={publicUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-10 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                          >
+                            Abrir página pública
+                          </a>
+                        ) : null}
                       </div>
                     </div>
-
-                    {company.publicDescription ? (
-                      <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                          Descrição pública
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {company.publicDescription}
-                        </p>
-                      </div>
-                    ) : null}
 
                     <div className="mt-4 rounded-[22px] border border-blue-200 bg-blue-50 p-4">
                       <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
@@ -789,7 +825,9 @@ export default function DecorMasterPage() {
                           <select
                             value={draft.planStatus}
                             onChange={(e) =>
-                              updateCompanyDraft(company.id, { planStatus: e.target.value })
+                              updateCompanyDraft(company.id, {
+                                planStatus: e.target.value,
+                              })
                             }
                             className="h-11 w-full rounded-2xl border border-blue-200 bg-white px-3 text-sm outline-none focus:border-blue-500"
                           >
@@ -873,6 +911,311 @@ export default function DecorMasterPage() {
           </div>
         </div>
       </div>
+
+      {detailsOpen && selectedCompany ? (
+        <div className="fixed inset-0 z-[80] bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="mx-auto flex h-full max-w-6xl items-center justify-center">
+            <div className="relative max-h-[92vh] w-full overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+              <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl font-semibold tracking-[-0.03em] text-slate-950">
+                      {selectedCompany.name}
+                    </h2>
+                    <Badge
+                      text={selectedCompany.plan}
+                      tone={planTone(selectedCompany.plan)}
+                    />
+                    <Badge
+                      text={selectedCompany.planStatus}
+                      tone={statusTone(selectedCompany.planStatus)}
+                    />
+                    <Badge
+                      text={selectedCompany.active ? "ativa" : "inativa"}
+                      tone={selectedCompany.active ? "emerald" : "rose"}
+                    />
+                  </div>
+
+                  <p className="mt-2 text-sm text-slate-500">
+                    ID: <strong>{selectedCompany.id}</strong>
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Slug: <strong>{selectedCompany.slug}</strong> · Criada em{" "}
+                    <strong>{formatDateTime(selectedCompany.createdAt)}</strong> ·
+                    Atualizada em{" "}
+                    <strong>{formatDateTime(selectedCompany.updatedAt)}</strong>
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetailsOpen(false);
+                    setSelectedCompany(null);
+                  }}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="px-5 py-5 sm:px-6">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MiniStat label="Usuários" value={String(selectedCompany.usersCount)} />
+                  <MiniStat
+                    label="Usuários ativos"
+                    value={String(selectedCompany.activeUsersCount)}
+                  />
+                  <MiniStat
+                    label="Clientes"
+                    value={String(selectedCompany.clientsCount)}
+                  />
+                  <MiniStat label="Pedidos" value={String(selectedCompany.ordersCount)} />
+                  <MiniStat
+                    label="Concluídos"
+                    value={String(selectedCompany.completedOrdersCount)}
+                  />
+                  <MiniStat
+                    label="Cancelados"
+                    value={String(selectedCompany.cancelledOrdersCount)}
+                  />
+                  <MiniStat
+                    label="Produtos"
+                    value={String(selectedCompany.productsCount)}
+                  />
+                  <MiniStat
+                    label="Produtos ativos"
+                    value={String(selectedCompany.activeProductsCount)}
+                  />
+                  <MiniStat
+                    label="Destaques"
+                    value={String(selectedCompany.featuredProductsCount)}
+                  />
+                  <MiniStat
+                    label="Categorias"
+                    value={String(selectedCompany.categoriesCount)}
+                  />
+                  <MiniStat
+                    label="Subcategorias"
+                    value={String(selectedCompany.subcategoriesCount)}
+                  />
+                  <MiniStat
+                    label="Ticket médio"
+                    value={formatCurrency(selectedCompany.averageTicket)}
+                  />
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <MiniMoney
+                    label="Faturamento"
+                    value={selectedCompany.grossRevenue}
+                  />
+                  <MiniMoney
+                    label="Custos extras"
+                    value={selectedCompany.extraCosts}
+                  />
+                  <MiniMoney
+                    label="Lucro estimado"
+                    value={selectedCompany.estimatedProfit}
+                  />
+                </div>
+
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  <InfoPanel
+                    title="Informações da empresa"
+                    rows={[
+                      {
+                        label: "Tipo de negócio",
+                        value: selectedCompany.businessType || "—",
+                      },
+                      {
+                        label: "Documento",
+                        value: selectedCompany.document || "—",
+                      },
+                      {
+                        label: "E-mail interno",
+                        value: selectedCompany.email || "—",
+                      },
+                      {
+                        label: "Telefone",
+                        value: selectedCompany.phone || "—",
+                      },
+                      {
+                        label: "Instagram",
+                        value: selectedCompany.instagram || "—",
+                      },
+                      {
+                        label: "WhatsApp",
+                        value: selectedCompany.whatsapp || "—",
+                      },
+                      {
+                        label: "E-mail público",
+                        value: selectedCompany.emailPublico || "—",
+                      },
+                      {
+                        label: "Link público",
+                        value: selectedCompany.publicLinkEnabled ? "Ativo" : "Inativo",
+                      },
+                      {
+                        label: "Dono(s)",
+                        value:
+                          selectedCompany.ownerNames.length > 0
+                            ? selectedCompany.ownerNames.join(", ")
+                            : "—",
+                      },
+                      {
+                        label: "E-mail(s) do dono",
+                        value:
+                          selectedCompany.ownerEmails.length > 0
+                            ? selectedCompany.ownerEmails.join(", ")
+                            : "—",
+                      },
+                    ]}
+                  />
+
+                  <InfoPanel
+                    title="Catálogo / entrega / presença"
+                    rows={[
+                      {
+                        label: "Título público",
+                        value: selectedCompany.publicLinkTitle || "—",
+                      },
+                      {
+                        label: "Subtítulo público",
+                        value: selectedCompany.publicLinkSubtitle || "—",
+                      },
+                      {
+                        label: "Horário",
+                        value: selectedCompany.businessHours || "—",
+                      },
+                      {
+                        label: "Entrega",
+                        value: selectedCompany.deliveryEnabled ? "Ativa" : "Inativa",
+                      },
+                      {
+                        label: "Valor por km",
+                        value: formatCurrency(selectedCompany.deliveryPricePerKm),
+                      },
+                      {
+                        label: "Frete mínimo",
+                        value: formatCurrency(selectedCompany.deliveryMinimumFee),
+                      },
+                      {
+                        label: "Multiplicador ida/volta",
+                        value: String(
+                          selectedCompany.deliveryRoundTripMultiplier || 0
+                        ),
+                      },
+                      {
+                        label: "Distância máxima",
+                        value: `${selectedCompany.deliveryMaxDistanceKm || 0} km`,
+                      },
+                    ]}
+                  />
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>
+                        Endereço:{" "}
+                        <strong className="text-slate-900">
+                          {buildAddress(selectedCompany) || "—"}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Globe className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>
+                        Página pública:{" "}
+                        <strong className="break-all text-slate-900">
+                          {selectedCompany.slug && selectedCompany.slug !== "—"
+                            ? `${
+                                typeof window !== "undefined"
+                                  ? window.location.origin
+                                  : ""
+                              }/empresa/${selectedCompany.slug}`
+                            : "—"}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>
+                        Última atividade operacional:{" "}
+                        <strong className="text-slate-900">
+                          {formatDateTime(selectedCompany.lastOrderAt)}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>
+                        Telefone interno:{" "}
+                        <strong className="text-slate-900">
+                          {selectedCompany.phone || "—"}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Mail className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <span>
+                        E-mail interno:{" "}
+                        <strong className="break-all text-slate-900">
+                          {selectedCompany.email || "—"}
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedCompany.publicDescription ? (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Descrição pública
+                    </p>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">
+                      {selectedCompany.publicDescription}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  {selectedCompany.slug && selectedCompany.slug !== "—" ? (
+                    <a
+                      href={`${
+                        typeof window !== "undefined" ? window.location.origin : ""
+                      }/empresa/${selectedCompany.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-11 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      Abrir página pública
+                    </a>
+                  ) : null}
+
+                  {selectedCompany.mapsLink ? (
+                    <a
+                      href={selectedCompany.mapsLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Abrir no mapa
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -909,9 +1252,12 @@ function InfoPanel({
 
       <div className="mt-3 space-y-2">
         {rows.map((row) => (
-          <div key={`${title}-${row.label}`} className="flex items-start justify-between gap-4">
+          <div
+            key={`${title}-${row.label}`}
+            className="flex items-start justify-between gap-4"
+          >
             <span className="text-sm text-slate-500">{row.label}</span>
-            <span className="max-w-[60%] text-right text-sm font-medium text-slate-900">
+            <span className="max-w-[60%] break-words text-right text-sm font-medium text-slate-900">
               {row.value || "—"}
             </span>
           </div>
