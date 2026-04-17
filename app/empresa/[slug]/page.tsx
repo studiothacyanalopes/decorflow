@@ -74,6 +74,7 @@ type Product = {
   company_id: string;
   category_id: string | null;
   subcategory_ids: string[];
+  product_type: "kit" | "loose";
   name: string;
   slug: string;
   description: string | null;
@@ -188,24 +189,7 @@ function productMainImage(product: Product | { image_url?: string | null; galler
   return "";
 }
 
-function isLooseItem(
-  product: Product,
-  category?: Category,
-  subcategory?: Subcategory
-) {
-  const text = [
-    product.name,
-    product.description || "",
-    category?.name || "",
-    subcategory?.name || "",
-  ]
-    .join(" ")
-    .toLowerCase();
 
-  return /avulso|avulsos|item|itens|complemento|complementos|tapete|painel|cilindro|suporte|bandeja|mesa|vaso|arco/i.test(
-    text
-  );
-}
 
 function getProductSubcategories(
   product: Product,
@@ -390,6 +374,7 @@ supabase
     company_id,
     category_id,
     subcategory_ids,
+    product_type,
     name,
     slug,
     description,
@@ -462,20 +447,12 @@ const visibleProducts = useMemo(() => {
   }, [visibleProducts]);
 
 const buildKitProducts = useMemo(() => {
-  return visibleProducts.filter((product) => {
-    const category = categories.find((item) => item.id === product.category_id);
-    const productSubcategories = getProductSubcategories(product, subcategories);
-    return isLooseItem(product, category, productSubcategories[0]);
-  });
-}, [visibleProducts, categories, subcategories]);
+  return visibleProducts.filter((product) => product.product_type === "loose");
+}, [visibleProducts]);
 
 const regularProducts = useMemo(() => {
-  return visibleProducts.filter((product) => {
-    const category = categories.find((item) => item.id === product.category_id);
-    const productSubcategories = getProductSubcategories(product, subcategories);
-    return !isLooseItem(product, category, productSubcategories[0]);
-  });
-}, [visibleProducts, categories, subcategories]);
+  return visibleProducts.filter((product) => product.product_type === "kit");
+}, [visibleProducts]);
 
   const cartCount = useMemo(
     () => cart.reduce((acc, item) => acc + item.quantity, 0),

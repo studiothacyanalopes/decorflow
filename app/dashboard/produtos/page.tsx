@@ -47,6 +47,7 @@ type Product = {
   company_id: string;
   category_id: string | null;
   subcategory_ids: string[];
+  product_type: "kit" | "loose";
   name: string;
   slug: string;
   description: string | null;
@@ -90,6 +91,7 @@ const initialProductForm = {
   id: "",
   category_id: "",
   subcategory_ids: [] as string[],
+  product_type: "kit" as "kit" | "loose",
   name: "",
   slug: "",
   description: "",
@@ -131,24 +133,7 @@ function productMainImage(product: {
   return "";
 }
 
-function isLooseItemProduct(
-  product: Product,
-  category?: Category,
-  subcategory?: Subcategory
-) {
-  const text = [
-    product.name,
-    product.description || "",
-    category?.name || "",
-    subcategory?.name || "",
-  ]
-    .join(" ")
-    .toLowerCase();
 
-  return /avulso|avulsos|item avulso|itens avulsos|complemento|complementos|tapete|painel|cilindro|suporte|bandeja|mesa|vaso|arco|boleira|bolo fake|cachepot|cachepô/i.test(
-    text
-  );
-}
 
 export default function ProdutosPage() {
   const [loading, setLoading] = useState(true);
@@ -247,6 +232,7 @@ supabase
     company_id,
     category_id,
     subcategory_ids,
+    product_type,
     name,
     slug,
     description,
@@ -330,11 +316,12 @@ supabase
 
 function openNewProductModal(
   categoryId?: string,
-  preset: "default" | "loose" = "default"
+  preset: "kit" | "loose" = "kit"
 ) {
   setProductForm({
     ...initialProductForm,
     category_id: categoryId || "",
+    product_type: preset,
     description:
       preset === "loose"
         ? "Item avulso para complementar kit."
@@ -353,6 +340,7 @@ function openEditProductModal(product: Product) {
     subcategory_ids: Array.isArray(product.subcategory_ids)
       ? product.subcategory_ids
       : [],
+    product_type: product.product_type === "loose" ? "loose" : "kit",
     name: product.name || "",
     slug: product.slug || "",
     description: product.description || "",
@@ -607,21 +595,22 @@ function openEditProductModal(product: Product) {
         return;
       }
 
-        const payload = {
-        company_id: company.id,
-        category_id: productForm.category_id || null,
-        subcategory_ids:
-            productForm.subcategory_ids.length > 0 ? productForm.subcategory_ids : [],
-        name: productForm.name.trim(),
-        slug: cleanSlug,
-        description: productForm.description.trim() || null,
-        price: productForm.price ? Number(productForm.price) : null,
-        image_url: productForm.image_url.trim() || null,
-        gallery_urls: productForm.gallery_urls.length > 0 ? productForm.gallery_urls : [],
-        is_featured: productForm.is_featured,
-        is_active: productForm.is_active,
-        sort_order: Number(productForm.sort_order || 0),
-        };
+const payload = {
+  company_id: company.id,
+  category_id: productForm.category_id || null,
+  subcategory_ids:
+    productForm.subcategory_ids.length > 0 ? productForm.subcategory_ids : [],
+  product_type: productForm.product_type,
+  name: productForm.name.trim(),
+  slug: cleanSlug,
+  description: productForm.description.trim() || null,
+  price: productForm.price ? Number(productForm.price) : null,
+  image_url: productForm.image_url.trim() || null,
+  gallery_urls: productForm.gallery_urls.length > 0 ? productForm.gallery_urls : [],
+  is_featured: productForm.is_featured,
+  is_active: productForm.is_active,
+  sort_order: Number(productForm.sort_order || 0),
+};
 
       if (productForm.id) {
         const { error } = await supabase
@@ -1202,14 +1191,14 @@ const matchesSearch =
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => openNewSubcategoryModal()}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                <Plus className="h-4 w-4" />
-                Nova sub
-              </button>
+<button
+  type="button"
+  onClick={() => openNewSubcategoryModal()}
+  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+>
+  <Plus className="h-4 w-4" />
+  Nova sub
+</button>
             </div>
 
             <div className="space-y-3">
@@ -1423,15 +1412,15 @@ const matchesSearch =
                                 {product.name}
                             </h3>
 
-                            {isLooseItemProduct(product, category, productSubcategories[0]) ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
-                                Item avulso
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-                                Kit / tema
-                                </span>
-                            )}
+                          {product.product_type === "loose" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                              Item avulso
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                              Kit / tema
+                            </span>
+                          )}
 
                             {product.is_featured ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
@@ -1735,31 +1724,46 @@ const matchesSearch =
             wide
             >
           <form onSubmit={handleSaveProduct} className="space-y-6">
-            <div className="grid gap-5 md:grid-cols-2">
-              <SelectField
-                label="Categoria"
-                value={productForm.category_id}
-                onChange={(value) =>
-                setProductForm((prev) => ({
-                    ...prev,
-                    category_id: value,
-                    subcategory_ids: prev.subcategory_ids.filter((selectedId) =>
-                    subcategories.some(
-                        (item) =>
-                        item.id === selectedId &&
-                        (item.category_id === value || !item.category_id)
-                    )
-                    ),
-                }))
-                }
-              >
-                <option value="">Sem categoria</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </SelectField>
+<div className="grid gap-5 md:grid-cols-2">
+  <SelectField
+    label="Tipo do produto"
+    value={productForm.product_type}
+    onChange={(value) =>
+      setProductForm((prev) => ({
+        ...prev,
+        product_type: value as "kit" | "loose",
+      }))
+    }
+    required
+  >
+    <option value="kit">Kit / tema</option>
+    <option value="loose">Item avulso</option>
+  </SelectField>
+
+  <SelectField
+    label="Categoria"
+    value={productForm.category_id}
+    onChange={(value) =>
+      setProductForm((prev) => ({
+        ...prev,
+        category_id: value,
+        subcategory_ids: prev.subcategory_ids.filter((selectedId) =>
+          subcategories.some(
+            (item) =>
+              item.id === selectedId &&
+              (item.category_id === value || !item.category_id)
+          )
+        ),
+      }))
+    }
+  >
+    <option value="">Sem categoria</option>
+    {categories.map((category) => (
+      <option key={category.id} value={category.id}>
+        {category.name}
+      </option>
+    ))}
+  </SelectField>
 
 <div>
   <label className="mb-2 block text-sm font-semibold text-slate-900">
