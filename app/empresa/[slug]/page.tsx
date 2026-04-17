@@ -270,6 +270,9 @@ export default function EmpresaPublicPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedSubcategory, setSelectedSubcategory] = useState("all");
 
+  const [regularPage, setRegularPage] = useState(1);
+  const [buildKitPage, setBuildKitPage] = useState(1);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -305,6 +308,11 @@ export default function EmpresaPublicPage() {
     if (!slug) return;
     loadPublicCatalog();
   }, [slug]);
+
+    useEffect(() => {
+    setRegularPage(1);
+    setBuildKitPage(1);
+  }, [search, selectedCategory, selectedSubcategory]);
 
   async function loadPublicCatalog() {
     try {
@@ -453,6 +461,42 @@ const buildKitProducts = useMemo(() => {
 const regularProducts = useMemo(() => {
   return visibleProducts.filter((product) => product.product_type === "kit");
 }, [visibleProducts]);
+
+  const PRODUCTS_PER_PAGE = 10;
+
+  const regularTotalPages = Math.max(
+    1,
+    Math.ceil(regularProducts.length / PRODUCTS_PER_PAGE)
+  );
+
+  const buildKitTotalPages = Math.max(
+    1,
+    Math.ceil(buildKitProducts.length / PRODUCTS_PER_PAGE)
+  );
+
+  const paginatedRegularProducts = useMemo(() => {
+    const start = (regularPage - 1) * PRODUCTS_PER_PAGE;
+    const end = start + PRODUCTS_PER_PAGE;
+    return regularProducts.slice(start, end);
+  }, [regularProducts, regularPage]);
+
+  const paginatedBuildKitProducts = useMemo(() => {
+    const start = (buildKitPage - 1) * PRODUCTS_PER_PAGE;
+    const end = start + PRODUCTS_PER_PAGE;
+    return buildKitProducts.slice(start, end);
+  }, [buildKitProducts, buildKitPage]);
+
+  useEffect(() => {
+    if (regularPage > regularTotalPages) {
+      setRegularPage(regularTotalPages);
+    }
+  }, [regularPage, regularTotalPages]);
+
+  useEffect(() => {
+    if (buildKitPage > buildKitTotalPages) {
+      setBuildKitPage(buildKitTotalPages);
+    }
+  }, [buildKitPage, buildKitTotalPages]);
 
   const cartCount = useMemo(
     () => cart.reduce((acc, item) => acc + item.quantity, 0),
@@ -1358,19 +1402,51 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
           {regularProducts.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {regularProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  company={company}
-                  category={categories.find((item) => item.id === product.category_id)}
-subcategory={getProductSubcategories(product, subcategories)[0]}
-                  onOpenDetails={openProductDetails}
-                  compact
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {paginatedRegularProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    company={company}
+                    category={categories.find((item) => item.id === product.category_id)}
+                    subcategory={getProductSubcategories(product, subcategories)[0]}
+                    onOpenDetails={openProductDetails}
+                    compact
+                  />
+                ))}
+              </div>
+
+              {regularTotalPages > 1 ? (
+                <div className="mt-5 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRegularPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={regularPage === 1}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-[#121a2e] px-4 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80">
+                    Página {regularPage} de {regularTotalPages}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRegularPage((prev) =>
+                        Math.min(prev + 1, regularTotalPages)
+                      )
+                    }
+                    disabled={regularPage === regularTotalPages}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-[#121a2e] px-4 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
 
@@ -1406,20 +1482,52 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {buildKitProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  company={company}
-                  category={categories.find((item) => item.id === product.category_id)}
-subcategory={getProductSubcategories(product, subcategories)[0]}
-                  onOpenDetails={openProductDetails}
-                  compact
-                  actionLabel="Ver detalhes"
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {paginatedBuildKitProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    company={company}
+                    category={categories.find((item) => item.id === product.category_id)}
+                    subcategory={getProductSubcategories(product, subcategories)[0]}
+                    onOpenDetails={openProductDetails}
+                    compact
+                    actionLabel="Ver detalhes"
+                  />
+                ))}
+              </div>
+
+              {buildKitTotalPages > 1 ? (
+                <div className="mt-5 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBuildKitPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={buildKitPage === 1}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-[#121a2e] px-4 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80">
+                    Página {buildKitPage} de {buildKitTotalPages}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBuildKitPage((prev) =>
+                        Math.min(prev + 1, buildKitTotalPages)
+                      )
+                    }
+                    disabled={buildKitPage === buildKitTotalPages}
+                    className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-[#121a2e] px-4 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
 
