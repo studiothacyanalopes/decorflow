@@ -11,7 +11,6 @@ import {
   Sparkles,
   MapPin,
   Clock3,
-  AtSign,
   ShoppingBag,
   Plus,
   Minus,
@@ -181,6 +180,67 @@ function formatDateLabel(value: string) {
   return `${day}/${month}/${year}`;
 }
 
+function getReturnDateInfo(value: string) {
+  if (!value) {
+    return {
+      pickupLabel: "",
+      returnLabel: "",
+      returnDate: "",
+      isWeekendFlow: false,
+    };
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const pickupDate = new Date(year, (month || 1) - 1, day || 1);
+
+  if (Number.isNaN(pickupDate.getTime())) {
+    return {
+      pickupLabel: "",
+      returnLabel: "",
+      returnDate: "",
+      isWeekendFlow: false,
+    };
+  }
+
+  const dayOfWeek = pickupDate.getDay(); // 0 dom, 1 seg, 2 ter, 3 qua, 4 qui, 5 sex, 6 sáb
+  const returnDate = new Date(pickupDate);
+
+  const isWeekendFlow = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+
+  if (dayOfWeek === 5) {
+    // sexta -> segunda
+    returnDate.setDate(returnDate.getDate() + 3);
+  } else if (dayOfWeek === 6) {
+    // sábado -> segunda
+    returnDate.setDate(returnDate.getDate() + 2);
+  } else if (dayOfWeek === 0) {
+    // domingo -> segunda
+    returnDate.setDate(returnDate.getDate() + 1);
+  } else {
+    // seg a qui -> próximo dia
+    returnDate.setDate(returnDate.getDate() + 1);
+  }
+
+  const yyyy = returnDate.getFullYear();
+  const mm = String(returnDate.getMonth() + 1).padStart(2, "0");
+  const dd = String(returnDate.getDate()).padStart(2, "0");
+
+  return {
+    pickupLabel: formatDateLabel(value),
+    returnLabel: `${dd}/${mm}/${yyyy} até 18:00`,
+    returnDate: `${yyyy}-${mm}-${dd}`,
+    isWeekendFlow,
+  };
+}
+
+function getMinPickupDate() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function productMainImage(product: Product | { image_url?: string | null; gallery_urls?: string[] | null }) {
   if (product.image_url) return product.image_url;
   if (Array.isArray(product.gallery_urls) && product.gallery_urls.length > 0) {
@@ -214,6 +274,33 @@ function buildAddress(company: Company) {
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+function isOpenNow(businessHours?: string | null) {
+  if (!businessHours) return false;
+
+  const now = new Date();
+  const hour = now.getHours();
+
+  // SIMPLES (depois melhoramos)
+  return hour >= 8 && hour < 18;
+}
+
+
+function parseBusinessHours(businessHours?: string | null) {
+  if (!businessHours) return [];
+
+  return businessHours
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [day, ...rest] = line.split(":");
+      return {
+        day: day?.trim() || "",
+        hours: rest.join(":").trim() || "",
+      };
+    });
 }
 
 function calculateDeliveryFee(company: Company | null, distanceKm: string) {
@@ -293,6 +380,7 @@ export default function EmpresaPublicPage() {
   const [checkoutName, setCheckoutName] = useState("");
   const [checkoutPhone, setCheckoutPhone] = useState("");
   const [checkoutFormError, setCheckoutFormError] = useState("");
+  const [checkoutNotes, setCheckoutNotes] = useState("");
 
   const [checkoutAddress, setCheckoutAddress] = useState<CheckoutAddress>({
     zip_code: "",
@@ -742,6 +830,23 @@ const regularProducts = useMemo(() => {
     setCart([]);
   }
 
+  function handleContinueShopping() {
+  setCartOpen(false);
+
+  if (typeof window !== "undefined") {
+    const target =
+      document.getElementById("monte-seu-kit") ||
+      document.getElementById("kits");
+
+    if (target) {
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
+}
+
     function openCheckoutModal() {
     if (!selectedEventDate) {
       alert("Selecione a data do evento antes de finalizar a compra.");
@@ -812,24 +917,28 @@ const regularProducts = useMemo(() => {
           ].join("\n")
         : `Retirada no local: ${companyAddress || "Endereço não informado"}`;
 
-    return [
-      `Olá! Quero finalizar uma compra no catálogo da ${company.name}.`,
-      "",
-      `Nome: ${checkoutName.trim()}`,
-      `Celular: ${checkoutPhone.trim()}`,
-      `Data do evento: ${formatDateLabel(selectedEventDate) || "Não informada"}`,
-      `Forma de recebimento: ${receiveModeText}`,
-      "",
-      "Itens:",
-      itemsText,
-      "",
-      deliveryText,
-      "",
-      `Subtotal dos itens: ${formatPrice(productsSubtotal)}`,
-      `Total final: ${formatPrice(totalWithDelivery)}`,
-      "",
-      "Pode seguir com meu pedido?",
-    ].join("\n");
+return [
+  `🛍️ *Novo pedido pelo catálogo da ${company.name}*`,
+  "",
+  `👤 *Cliente:* ${checkoutName.trim()}`,
+  `📱 *WhatsApp:* ${checkoutPhone.trim()}`,
+  `📝 *Observação:* ${checkoutNotes.trim() || "Nenhuma"}`,
+  "",
+  `📅 *Data da retirada:* ${returnDateInfo.pickupLabel || "Não informada"}`,
+  `📦 *Devolução:* ${returnDateInfo.returnLabel || "Não informada"}`,
+  `🚚 *Forma de recebimento:* ${receiveModeText}`,
+  "",
+  `📦 *Itens do pedido:*`,
+  itemsText,
+  "",
+  deliveryText,
+  "",
+  `💰 *Resumo do pedido:*`,
+  `• Subtotal: ${formatPrice(productsSubtotal)}`,
+  `• Total final: ${formatPrice(totalWithDelivery)}`,
+  "",
+  `✅ Posso seguir com o pedido?`,
+].join("\n");
   }
 
 async function handleFinishCheckout() {
@@ -892,9 +1001,28 @@ async function handleFinishCheckout() {
       : null;
 
   try {
-    const { data: orderInserted, error: orderError } = await supabase
-      .from("decor_orders")
-      .insert({
+    const orderItemsPayload = cart.map((item) => ({
+      product_id: item.product.id,
+      product_name: item.product.name,
+      unit_price: Number(item.product.price || 0),
+      quantity: Number(item.quantity || 0),
+      total_price: Number(item.product.price || 0) * Number(item.quantity || 0),
+      product_snapshot: {
+        image_url: item.product.image_url || productMainImage(item.product) || null,
+        category_id: item.product.category_id || null,
+        subcategory_ids: Array.isArray(item.product.subcategory_ids)
+          ? item.product.subcategory_ids
+          : [],
+        slug: item.product.slug || null,
+      },
+    }));
+
+    const response = await fetch("/api/decor/public-order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         company_id: company.id,
         order_number: orderNumber,
         source: "public_catalog",
@@ -918,47 +1046,21 @@ async function handleFinishCheckout() {
         contract_status: "not_sent",
         whatsapp_message: whatsappMessage,
         whatsapp_sent_at: new Date().toISOString(),
-        notes: null,
-      })
-      .select("id")
-      .single();
+        notes: checkoutNotes.trim() || null,
+        items: orderItemsPayload,
+      }),
+    });
 
-    if (orderError || !orderInserted?.id) {
-      console.error("Erro ao salvar pedido:", orderError);
-      setCheckoutFormError("Não foi possível salvar o pedido no sistema.");
+    const result = await response.json();
+
+    if (!response.ok || !result?.success) {
+      console.error("Erro ao salvar pedido:", result);
+      setCheckoutFormError(
+        result?.error || "Não foi possível salvar o pedido no sistema."
+      );
       return;
     }
 
-    const orderItemsPayload = cart.map((item) => ({
-      order_id: orderInserted.id,
-      product_id: item.product.id,
-      product_name: item.product.name,
-      unit_price: Number(item.product.price || 0),
-      quantity: Number(item.quantity || 0),
-      total_price: Number(item.product.price || 0) * Number(item.quantity || 0),
-      product_snapshot: {
-        image_url: item.product.image_url || productMainImage(item.product) || null,
-        category_id: item.product.category_id || null,
-        subcategory_ids: Array.isArray(item.product.subcategory_ids)
-          ? item.product.subcategory_ids
-          : [],
-        slug: item.product.slug || null,
-      },
-    }));
-
-    if (orderItemsPayload.length > 0) {
-      const { error: itemsError } = await supabase
-        .from("decor_order_items")
-        .insert(orderItemsPayload);
-
-      if (itemsError) {
-        console.error("Erro ao salvar itens do pedido:", itemsError);
-        setCheckoutFormError(
-          "O pedido foi criado, mas houve erro ao salvar os itens."
-        );
-        return;
-      }
-    }
 
     const whatsappUrl = buildWhatsAppUrl(company.whatsapp, whatsappMessage);
 
@@ -968,6 +1070,7 @@ async function handleFinishCheckout() {
     setCheckoutFormError("");
     setCheckoutName("");
     setCheckoutPhone("");
+    setCheckoutNotes("");
     setCart([]);
     setCartOpen(false);
     setProductDetailsOpen(false);
@@ -1025,146 +1128,11 @@ async function handleFinishCheckout() {
   }
 
   const companyAddress = buildAddress(company);
+  const returnDateInfo = getReturnDateInfo(selectedEventDate);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#0f1d44_0%,#07111f_18%,#050814_45%,#050814_100%)] text-white">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0a0f1c]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-4 py-3 sm:px-5 lg:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10">
-              <CompanyMedia
-                src={company.public_logo_url}
-                alt={company.name}
-                className="h-full w-full object-cover"
-                fallback={
-                  <span className="text-sm font-bold">
-                    {(company.name || "DF").slice(0, 2).toUpperCase()}
-                  </span>
-                }
-              />
-            </div>
 
-            <div className="min-w-0">
-              <h1 className="truncate text-[18px] font-semibold text-white">
-                {company.name}
-              </h1>
-              <p className="truncate text-xs text-white/55">
-                {company.city}
-                {company.city && company.state ? " - " : ""}
-                {company.state}
-              </p>
-            </div>
-          </div>
-
-          <nav className="ml-auto hidden items-center gap-2 lg:flex">
-            <a
-              href="#kits"
-              className="rounded-2xl px-4 py-2 text-sm font-medium text-white/75 transition hover:bg-white/5 hover:text-white"
-            >
-              Kits
-            </a>
-            <a
-              href="#monte-seu-kit"
-              className="rounded-2xl px-4 py-2 text-sm font-medium text-white/75 transition hover:bg-white/5 hover:text-white"
-            >
-              Monte seu kit
-            </a>
-            <a
-              href="#contato"
-              className="rounded-2xl px-4 py-2 text-sm font-medium text-white/75 transition hover:bg-white/5 hover:text-white"
-            >
-              Contato
-            </a>
-          </nav>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <a
-              href={buildWhatsAppUrl(
-                company.whatsapp,
-                `Olá! Vim pelo catálogo público da ${company.name} e quero mais informações.`
-              )}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#16c45b] px-4 text-sm font-semibold text-white shadow-[0_18px_30px_rgba(22,196,91,0.22)] transition hover:opacity-95"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Fale conosco
-            </a>
-
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar produtos..."
-                className="h-11 w-[260px] rounded-2xl border border-white/10 bg-[#121a2e] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#6f7dff] focus:ring-4 focus:ring-[#6f7dff]/10"
-              />
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-[#121a2e] text-white/80"
-            >
-              <Moon className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="border-t border-white/5 px-4 py-3 md:hidden">
-          <div className="mx-auto flex max-w-[1500px] flex-col gap-3">
-            <a
-              href={buildWhatsAppUrl(
-                company.whatsapp,
-                `Olá! Vim pelo catálogo público da ${company.name} e quero mais informações.`
-              )}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#16c45b] px-4 text-sm font-semibold text-white shadow-[0_18px_30px_rgba(22,196,91,0.22)] transition hover:opacity-95"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Fale conosco
-            </a>
-
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar produtos..."
-                className="h-11 w-full rounded-2xl border border-white/10 bg-[#121a2e] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#6f7dff] focus:ring-4 focus:ring-[#6f7dff]/10"
-              />
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <a
-                href="#kits"
-                className="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80"
-              >
-                Kits
-              </a>
-              <a
-                href="#monte-seu-kit"
-                className="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80"
-              >
-                Monte seu kit
-              </a>
-              <a
-                href="#contato"
-                className="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80"
-              >
-                Contato
-              </a>
-              <button
-                type="button"
-                onClick={() => setCartOpen(true)}
-                className="shrink-0 rounded-2xl border border-[#8b7cf6]/30 bg-[#8b7cf6]/15 px-4 py-2 text-sm font-semibold text-[#d7d1ff]"
-              >
-                Kit ({cartCount})
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
 
       <section className="mx-auto max-w-[1500px] px-4 pb-10 pt-4 sm:px-5 lg:px-6">
         <div className="overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1018] shadow-[0_24px_80px_rgba(0,0,0,0.30)]">
@@ -1201,9 +1169,9 @@ async function handleFinishCheckout() {
                   Catálogo público premium
                 </div>
 
-                <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-white sm:text-[38px]">
-                  {company.public_link_title || company.name}
-                </h2>
+                  <h2 className="mt-4 max-w-2xl text-[22px] font-semibold leading-tight text-white sm:text-[28px] lg:text-[32px]">
+                    {company.public_link_title || company.name}
+                  </h2>
 
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-white/70 sm:text-[15px]">
                   {company.public_link_subtitle ||
@@ -1211,42 +1179,86 @@ async function handleFinishCheckout() {
                     "Confira os temas, kits, itens avulsos e monte sua combinação ideal."}
                 </p>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {company.instagram ? (
-                    <a
-                      href={`https://instagram.com/${company.instagram.replace("@", "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
-                    >
-                      <AtSign className="h-4 w-4" />
-                      {company.instagram}
-                    </a>
-                  ) : null}
+<div className="mt-4 flex items-center gap-4">
 
-                  {companyAddress ? (
-                    <a
-                      href={company.maps_link || "#contato"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10 ${
-                        !company.maps_link ? "pointer-events-none opacity-70" : ""
-                      }`}
-                    >
-                      <MapPin className="h-4 w-4" />
-                      {company.city}
-                      {company.city && company.state ? " - " : ""}
-                      {company.state}
-                    </a>
-                  ) : null}
+  {/* INSTAGRAM */}
+  {company.instagram ? (
+    <a
+      href={`https://instagram.com/${company.instagram.replace("@", "")}`}
+      target="_blank"
+      rel="noreferrer"
+      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10"
+      aria-label="Instagram"
+      title="Instagram"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="h-4 w-4 text-white/70"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+        <path d="M8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0" />
+        <path d="M17.5 6.5h.01" />
+      </svg>
+    </a>
+  ) : null}
 
-                  {company.business_hours ? (
-                    <span className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                      <Clock3 className="h-4 w-4" />
-                      Funcionamento
-                    </span>
-                  ) : null}
-                </div>
+  {/* LOCALIZAÇÃO */}
+  {companyAddress ? (
+    <a
+      href={company.maps_link || "#"}
+      target="_blank"
+      rel="noreferrer"
+      className={`flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10 ${
+        !company.maps_link ? "pointer-events-none opacity-50" : ""
+      }`}
+      aria-label="Localização"
+      title="Localização"
+    >
+      <MapPin className="h-4 w-4 text-white/70" />
+    </a>
+  ) : null}
+
+  {/* WHATSAPP */}
+  {company.whatsapp ? (
+    <a
+      href={buildWhatsAppUrl(
+        company.whatsapp,
+        `Olá! Vim pelo catálogo público da ${company.name} e quero mais informações.`
+      )}
+      target="_blank"
+      rel="noreferrer"
+      className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#16c45b]/30 bg-[#16c45b]/15 transition hover:bg-[#16c45b]/25"
+      aria-label="WhatsApp"
+      title="WhatsApp"
+    >
+      <MessageCircle className="h-4 w-4 text-[#7ef0a8]" />
+    </a>
+  ) : null}
+
+  {/* STATUS (ABERTO/FECHADO) */}
+  {company.business_hours ? (
+    <div
+      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+      aria-label={isOpenNow(company.business_hours) ? "Loja aberta" : "Loja fechada"}
+      title={isOpenNow(company.business_hours) ? "Loja aberta" : "Loja fechada"}
+    >
+      <div
+        className={`h-3 w-3 rounded-full ${
+          isOpenNow(company.business_hours)
+            ? "bg-green-500"
+            : "bg-red-500"
+        }`}
+      />
+    </div>
+  ) : null}
+
+</div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1296,6 +1308,10 @@ async function handleFinishCheckout() {
             const count = products.filter(
               (item) => item.category_id === category.id
             ).length;
+
+
+
+
 
             return (
               <button
@@ -1388,6 +1404,19 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
             </div>
           </section>
         ) : null}
+
+
+        <div className="mt-6">
+  <div className="relative">
+    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+    <input
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      placeholder="Buscar em todos os produtos..."
+      className="h-12 w-full rounded-2xl border border-white/10 bg-[#121a2e] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#8b7cf6] focus:ring-4 focus:ring-[#8b7cf6]/10"
+    />
+  </div>
+</div>
 
         <section id="kits" className="mt-8">
           <div className="mb-4 flex items-center justify-between gap-4">
@@ -1556,21 +1585,54 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                   </div>
                 ) : null}
 
-                {company.business_hours ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <Clock3 className="mt-0.5 h-4 w-4 text-white/65" />
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/40">
-                          Funcionamento
-                        </p>
-                        <pre className="mt-1 whitespace-pre-wrap text-sm font-sans text-white/85">
-                          {company.business_hours}
-                        </pre>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+{company.business_hours ? (
+  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+    <div className="flex items-start gap-3">
+      <Clock3 className="mt-0.5 h-4 w-4 text-white/65" />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/40">
+            Funcionamento
+          </p>
+
+          <span
+            className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+              isOpenNow(company.business_hours)
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-rose-500/15 text-rose-300"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isOpenNow(company.business_hours)
+                  ? "bg-emerald-400"
+                  : "bg-rose-400"
+              }`}
+            />
+            {isOpenNow(company.business_hours) ? "Aberto agora" : "Fechado agora"}
+          </span>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {parseBusinessHours(company.business_hours).map((item, index) => (
+            <div
+              key={`${item.day}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-white/6 bg-white/[0.03] px-3 py-2"
+            >
+              <span className="text-sm font-medium text-white/75">
+                {item.day}
+              </span>
+              <span className="text-sm font-semibold text-white">
+                {item.hours || "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+) : null}
 
                 {company.email_publico ? (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1637,6 +1699,33 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
           </div>
         </section>
       </section>
+
+            {cartCount > 0 ? (
+        <div className="fixed bottom-4 right-4 z-[58] sm:bottom-5 sm:right-5 lg:bottom-6 lg:right-6">
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="group inline-flex items-center gap-3 rounded-full border border-[#8b7cf6]/35 bg-[#0f172a]/92 px-4 py-3 text-white shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-[#131d33]"
+          >
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[#8b7cf6] text-white shadow-[0_12px_24px_rgba(139,124,246,0.35)]">
+              <ShoppingBag className="h-5 w-5" />
+
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#16c45b] px-1 text-[11px] font-bold text-white">
+                {cartCount}
+              </span>
+            </div>
+
+            <div className="hidden text-left sm:block">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                Seu kit
+              </p>
+              <p className="text-sm font-semibold text-white">
+                {cartCount} item(ns) • {formatPrice(totalWithDelivery)}
+              </p>
+            </div>
+          </button>
+        </div>
+      ) : null}
 
       <div
         className={`fixed inset-0 z-[60] transition ${
@@ -1715,39 +1804,79 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                       {formatPrice(selectedProduct.price)}
                     </p>
 
-                    <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4">
-                      <div className="flex items-start gap-3">
-                        <CalendarDays className="mt-0.5 h-5 w-5 text-[#d7d1ff]" />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-white/90">
-                            Data do evento
-                          </p>
-                          <p className="mt-1 text-sm text-white/55">
-                            Selecione a data desejada para continuar com a montagem do pedido.
-                          </p>
+<div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-4">
+  <div className="flex items-start gap-3">
+    <CalendarDays className="mt-0.5 h-5 w-5 text-[#d7d1ff]" />
 
-                          <input
-                            type="date"
-                            value={selectedEventDate}
-                            onChange={(e) => setSelectedEventDate(e.target.value)}
-                            className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-[#121a2e] px-4 text-sm text-white outline-none transition focus:border-[#6f7dff] focus:ring-4 focus:ring-[#6f7dff]/10"
-                          />
+    <div className="flex-1">
+      <p className="text-sm font-semibold text-white/90">
+        Data da retirada
+      </p>
+      <p className="mt-1 text-sm text-white/55">
+        Selecione o dia em que deseja retirar ou receber sua decoração.
+      </p>
 
-                          {selectedEventDate ? (
-                            <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                              Data selecionada para consulta:{" "}
-                              <span className="font-semibold text-white">
-                                {formatDateLabel(selectedEventDate)}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="mt-3 rounded-2xl border border-white/10 bg-[#121a2e] px-4 py-3 text-sm text-white/60">
-                              Escolha uma data para seguir com o pedido.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+      <input
+        type="date"
+        min={getMinPickupDate()}
+        value={selectedEventDate}
+        onChange={(e) => setSelectedEventDate(e.target.value)}
+        className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-[#121a2e] px-4 text-sm text-white outline-none transition focus:border-[#6f7dff] focus:ring-4 focus:ring-[#6f7dff]/10"
+      />
+
+      {selectedEventDate ? (
+        <div className="mt-3 space-y-3">
+          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300/80">
+              Retirada
+            </span>
+            <span className="mt-1 block font-semibold text-white">
+              {returnDateInfo.pickupLabel}
+            </span>
+          </div>
+
+          <div
+            className={`rounded-2xl px-4 py-3 text-sm ${
+              returnDateInfo.isWeekendFlow
+                ? "border border-amber-400/20 bg-amber-500/10 text-amber-100"
+                : "border border-white/10 bg-[#121a2e] text-white/75"
+            }`}
+          >
+            <span
+              className={`block text-xs font-semibold uppercase tracking-[0.14em] ${
+                returnDateInfo.isWeekendFlow
+                  ? "text-amber-300/80"
+                  : "text-white/40"
+              }`}
+            >
+              Devolução prevista
+            </span>
+
+            <span className="mt-1 block font-semibold text-white">
+              {returnDateInfo.returnLabel}
+            </span>
+
+            <span
+              className={`mt-2 block text-xs ${
+                returnDateInfo.isWeekendFlow
+                  ? "text-amber-200/80"
+                  : "text-white/50"
+              }`}
+            >
+              {returnDateInfo.isWeekendFlow
+                ? "Como a retirada cai em sexta, sábado ou domingo, a devolução passa automaticamente para segunda-feira até 18:00."
+                : "Para retiradas em dias úteis, a devolução fica no próximo dia até 18:00."}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 rounded-2xl border border-white/10 bg-[#121a2e] px-4 py-3 text-sm text-white/60">
+          Ao selecionar a retirada, vamos calcular automaticamente a data de devolução.
+        </div>
+      )}
+    </div>
+  </div>
+</div>
 
                     <div className="mt-6">
                       <p className="text-sm font-semibold text-white/90">
@@ -2455,24 +2584,33 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                   </p>
                 </div>
 
-                <div className="mt-4 grid gap-3">
-                  <button
-                    type="button"
-                    onClick={openCheckoutModal}
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#16c45b] px-4 text-sm font-semibold text-white shadow-[0_18px_30px_rgba(22,196,91,0.22)] transition hover:opacity-95"
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                    Finalizar compra
-                  </button>
+<div className="mt-4 grid gap-3">
+  <button
+    type="button"
+    onClick={handleContinueShopping}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#8b7cf6]/30 bg-[#8b7cf6]/12 px-4 text-sm font-semibold text-[#d7d1ff] transition hover:bg-[#8b7cf6]/20"
+  >
+    <Plus className="h-4 w-4" />
+    Adicionar mais itens
+  </button>
 
-                  <button
-                    type="button"
-                    onClick={clearCart}
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-                  >
-                    Limpar kit
-                  </button>
-                </div>
+  <button
+    type="button"
+    onClick={openCheckoutModal}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#16c45b] px-4 text-sm font-semibold text-white shadow-[0_18px_30px_rgba(22,196,91,0.22)] transition hover:opacity-95"
+  >
+    <ShoppingBag className="h-4 w-4" />
+    Finalizar compra
+  </button>
+
+  <button
+    type="button"
+    onClick={clearCart}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+  >
+    Limpar kit
+  </button>
+</div>
               </div>
             </div>
           </div>
@@ -2560,6 +2698,21 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                   />
                 </div>
               </div>
+
+
+              <div>
+  <label className="mb-2 block text-sm font-semibold text-white/85">
+    Observação
+  </label>
+
+  <textarea
+    value={checkoutNotes}
+    onChange={(e) => setCheckoutNotes(e.target.value)}
+    placeholder="Ex: tocar interfone, entregar na portaria, referência do local, horário preferido, detalhes importantes..."
+    rows={4}
+    className="w-full rounded-2xl border border-white/10 bg-[#121a2e] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#6f7dff] focus:ring-4 focus:ring-[#6f7dff]/10 resize-none"
+  />
+</div>
 
               {/* erro */}
               {checkoutFormError ? (
