@@ -50,6 +50,11 @@ type CompanyForm = {
   delivery_minimum_fee: string;
   delivery_round_trip_multiplier: string;
   delivery_max_distance_km: string;
+  advance_payment_enabled: boolean;
+  advance_payment_percent: string;
+    pix_enabled: boolean;
+  pix_key: string;
+  pix_holder_name: string;
 };
 
 const initialForm: CompanyForm = {
@@ -79,6 +84,11 @@ const initialForm: CompanyForm = {
   delivery_minimum_fee: "0",
   delivery_round_trip_multiplier: "4",
   delivery_max_distance_km: "10",
+  advance_payment_enabled: false,
+  advance_payment_percent: "30",
+    pix_enabled: false,
+  pix_key: "",
+  pix_holder_name: "",
 };
 
 function slugify(value: string) {
@@ -185,7 +195,12 @@ const [status, setStatus] = useState<{
             delivery_price_per_km,
             delivery_minimum_fee,
             delivery_round_trip_multiplier,
-            delivery_max_distance_km
+            delivery_max_distance_km,
+            advance_payment_enabled,
+            advance_payment_percent,
+            pix_enabled,
+            pix_key,
+            pix_holder_name
           `
         )
         .eq("id", membership.company_id)
@@ -239,6 +254,14 @@ const [status, setStatus] = useState<{
           company.delivery_max_distance_km != null
             ? String(company.delivery_max_distance_km)
             : "10",
+        advance_payment_enabled: company.advance_payment_enabled ?? false,
+        advance_payment_percent:
+          company.advance_payment_percent != null
+            ? String(company.advance_payment_percent)
+            : "30",
+        pix_enabled: company.pix_enabled ?? false,
+        pix_key: company.pix_key ?? "",
+        pix_holder_name: company.pix_holder_name ?? "",
       });
     } catch {
       setStatus({
@@ -487,6 +510,11 @@ function removeImage(type: "logo" | "cover") {
           form.delivery_round_trip_multiplier || 4
         ),
         delivery_max_distance_km: Number(form.delivery_max_distance_km || 10),
+        advance_payment_enabled: form.advance_payment_enabled,
+        advance_payment_percent: Number(form.advance_payment_percent || 0),
+        pix_enabled: form.pix_enabled,
+        pix_key: form.pix_key.trim(),
+        pix_holder_name: form.pix_holder_name.trim(),
       };
 
       const { error } = await supabase
@@ -849,6 +877,142 @@ function removeImage(type: "logo" | "cover") {
                 </div>
               </div>
             </div>
+
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="mb-6 flex items-center gap-3">
+    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+      <AlertCircle className="h-5 w-5" />
+    </div>
+    <div>
+      <h2 className="text-lg font-semibold text-slate-950">
+        Atenção para fechamento do pedido
+      </h2>
+      <p className="text-sm text-slate-500">
+        Configure se o cliente precisa pagar um percentual antecipado para confirmar o pedido.
+      </p>
+    </div>
+  </div>
+
+  <div className="space-y-5">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            Ativar cobrança antecipada
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Quando ativado, o catálogo poderá avisar que para fechar o pedido será necessário pagar um percentual antecipado.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            updateField("advance_payment_enabled", !form.advance_payment_enabled)
+          }
+          className={`relative inline-flex h-11 w-[76px] items-center rounded-full px-1 transition ${
+            form.advance_payment_enabled ? "bg-slate-950" : "bg-slate-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-9 w-9 rounded-full bg-white shadow-sm transition ${
+              form.advance_payment_enabled
+                ? "translate-x-[30px]"
+                : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+
+    <div className="grid gap-5 md:grid-cols-2">
+      <Field
+        label="Percentual antecipado (%)"
+        value={form.advance_payment_percent}
+        onChange={(value) =>
+          updateField(
+            "advance_payment_percent",
+            value.replace(/[^\d.,]/g, "").replace(",", ".")
+          )
+        }
+        placeholder="30"
+      />
+    </div>
+
+    <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      Atenção: quando essa opção estiver ativa, o cliente verá uma mensagem informando que para fechar o pedido será necessário pagar{" "}
+      <span className="font-semibold">
+        {form.advance_payment_percent || "0"}%
+      </span>{" "}
+      antecipadamente.
+    </div>
+  </div>
+</div>
+
+<div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="mb-6 flex items-center gap-3">
+    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+      <Copy className="h-5 w-5" />
+    </div>
+    <div>
+      <h2 className="text-lg font-semibold text-slate-950">
+        PIX para fechamento do pedido
+      </h2>
+      <p className="text-sm text-slate-500">
+        Configure se deseja receber sinal por PIX e informe os dados que aparecerão no fechamento.
+      </p>
+    </div>
+  </div>
+
+  <div className="space-y-5">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            Ativar PIX no pedido
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Quando ativado, o cliente poderá visualizar que o fechamento pode exigir pagamento via PIX.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => updateField("pix_enabled", !form.pix_enabled)}
+          className={`relative inline-flex h-11 w-[76px] items-center rounded-full px-1 transition ${
+            form.pix_enabled ? "bg-slate-950" : "bg-slate-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-9 w-9 rounded-full bg-white shadow-sm transition ${
+              form.pix_enabled ? "translate-x-[30px]" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+
+    <div className="grid gap-5 md:grid-cols-2">
+      <Field
+        label="Chave PIX"
+        value={form.pix_key}
+        onChange={(value) => updateField("pix_key", value)}
+        placeholder="CPF, e-mail, telefone ou chave aleatória"
+      />
+
+      <Field
+        label="Nome do favorecido"
+        value={form.pix_holder_name}
+        onChange={(value) => updateField("pix_holder_name", value)}
+        placeholder="Ex: Maria da Silva"
+      />
+    </div>
+
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+      Quando o PIX estiver ativo, você poderá usar essa chave no fluxo público para solicitar o sinal do pedido de forma mais profissional.
+    </div>
+  </div>
+</div>
 
 
             <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">

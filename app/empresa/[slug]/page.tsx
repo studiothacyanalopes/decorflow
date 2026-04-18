@@ -49,6 +49,11 @@ type Company = {
   delivery_minimum_fee?: number | null;
   delivery_round_trip_multiplier?: number | null;
   delivery_max_distance_km?: number | null;
+  advance_payment_enabled?: boolean | null;
+  advance_payment_percent?: number | null;
+  pix_enabled?: boolean | null;
+  pix_key?: string | null;
+  pix_holder_name?: string | null;
 };
 
 type Category = {
@@ -376,11 +381,13 @@ export default function EmpresaPublicPage() {
   const [deliveryError, setDeliveryError] = useState("");
   const [deliveryPickupAddress, setDeliveryPickupAddress] = useState("");
 
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [checkoutName, setCheckoutName] = useState("");
-  const [checkoutPhone, setCheckoutPhone] = useState("");
-  const [checkoutFormError, setCheckoutFormError] = useState("");
-  const [checkoutNotes, setCheckoutNotes] = useState("");
+const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+const [checkoutName, setCheckoutName] = useState("");
+const [checkoutPhone, setCheckoutPhone] = useState("");
+const [checkoutFormError, setCheckoutFormError] = useState("");
+const [checkoutNotes, setCheckoutNotes] = useState("");
+const [checkoutPixStep, setCheckoutPixStep] = useState(false);
+const [checkoutReviewStep, setCheckoutReviewStep] = useState(false);
 
   const [checkoutAddress, setCheckoutAddress] = useState<CheckoutAddress>({
     zip_code: "",
@@ -432,7 +439,12 @@ export default function EmpresaPublicPage() {
           delivery_price_per_km,
           delivery_minimum_fee,
           delivery_round_trip_multiplier,
-          delivery_max_distance_km
+          delivery_max_distance_km,
+          advance_payment_enabled,
+          advance_payment_percent,
+          pix_enabled,
+          pix_key,
+          pix_holder_name
         `)
         .eq("slug", slug)
         .eq("public_link_enabled", true)
@@ -445,6 +457,7 @@ export default function EmpresaPublicPage() {
       }
 
       setCompany(companyData);
+      console.log("PUBLIC COMPANY DATA", companyData);
 
       const [categoriesRes, subcategoriesRes, productsRes] = await Promise.all([
         supabase
@@ -609,6 +622,18 @@ const regularProducts = useMemo(() => {
   const totalWithDelivery = useMemo(() => {
     return productsSubtotal + deliveryFee;
   }, [productsSubtotal, deliveryFee]);
+
+    const advancePercent = Number(company?.advance_payment_percent || 0);
+
+  const advanceAmount = useMemo(() => {
+    if (!company?.advance_payment_enabled || advancePercent <= 0) return 0;
+    return (totalWithDelivery * advancePercent) / 100;
+  }, [company?.advance_payment_enabled, advancePercent, totalWithDelivery]);
+
+  const remainingAmount = useMemo(() => {
+    if (!company?.advance_payment_enabled || advancePercent <= 0) return totalWithDelivery;
+    return Math.max(totalWithDelivery - advanceAmount, 0);
+  }, [company?.advance_payment_enabled, advancePercent, totalWithDelivery, advanceAmount]);
 
   function updateCheckoutField<K extends keyof CheckoutAddress>(
     field: K,
@@ -847,30 +872,83 @@ const regularProducts = useMemo(() => {
   }
 }
 
-    function openCheckoutModal() {
-    if (!selectedEventDate) {
-      alert("Selecione a data do evento antes de finalizar a compra.");
-      return;
-    }
-
-    if (cart.length === 0) {
-      alert("Adicione pelo menos um item ao carrinho antes de finalizar.");
-      return;
-    }
-
-    if (company?.delivery_enabled && deliveryMode === "delivery" && !deliveryFeeCalculated) {
-      alert("Calcule o frete antes de finalizar a compra.");
-      return;
-    }
-
-    setCheckoutFormError("");
-    setCheckoutModalOpen(true);
+function openCheckoutModal() {
+  if (!selectedEventDate) {
+    alert("Selecione a data do evento antes de finalizar a compra.");
+    return;
   }
 
-  function closeCheckoutModal() {
-    setCheckoutModalOpen(false);
-    setCheckoutFormError("");
+  if (cart.length === 0) {
+    alert("Adicione pelo menos um item ao carrinho antes de finalizar.");
+    return;
   }
+
+  if (
+    company?.delivery_enabled &&
+    deliveryMode === "delivery" &&
+    !deliveryFeeCalculated
+  ) {
+    alert("Calcule o frete antes de finalizar a compra.");
+    return;
+  }
+
+  const shouldOpenPixStep =
+    Boolean(company?.advance_payment_enabled) || Boolean(company?.pix_enabled);
+
+  setCheckoutFormError("");
+  setCheckoutReviewStep(false);
+  setCheckoutPixStep(shouldOpenPixStep);
+  setCheckoutModalOpen(true);
+}
+
+function closeCheckoutModal() {
+  setCheckoutModalOpen(false);
+  setCheckoutPixStep(false);
+  setCheckoutReviewStep(false);
+  setCheckoutFormError("");
+}
+
+function handleProceedToReviewStep() {
+  setCheckoutFormError("");
+
+  if (!company) {
+    setCheckoutFormError("Empresa não encontrada para finalizar o pedido.");
+    return;
+  }
+
+  if (!checkoutName.trim()) {
+    setCheckoutFormError("Informe seu nome para continuar.");
+    return;
+  }
+
+  const digits = formatPhoneDigits(checkoutPhone);
+
+  if (digits.length < 10) {
+    setCheckoutFormError("Informe um celular válido com DDD.");
+    return;
+  }
+
+  if (!selectedEventDate) {
+    setCheckoutFormError("Selecione a data do evento antes de continuar.");
+    return;
+  }
+
+  if (cart.length === 0) {
+    setCheckoutFormError("Adicione pelo menos um item ao carrinho.");
+    return;
+  }
+
+  if (
+    company.delivery_enabled &&
+    deliveryMode === "delivery" &&
+    !deliveryFeeCalculated
+  ) {
+    setCheckoutFormError("Calcule o frete antes de continuar.");
+    return;
+  }
+
+  handleFinishCheckout();
+}
 
   function buildCheckoutMessage() {
     if (!company) return "";
@@ -917,6 +995,25 @@ const regularProducts = useMemo(() => {
           ].join("\n")
         : `Retirada no local: ${companyAddress || "Endereço não informado"}`;
 
+            const paymentAttentionText =
+      company?.advance_payment_enabled && advancePercent > 0
+        ? [
+            `⚠️ *Atenção para fechamento:*`,
+            `• Para confirmar o pedido, solicitamos o pagamento antecipado de ${advancePercent}%`,
+            `• Valor do sinal: ${formatPrice(advanceAmount)}`,
+            `• Restante: ${formatPrice(remainingAmount)}`,
+          ].join("\n")
+        : "";
+
+    const pixText =
+      company?.pix_enabled && company?.pix_key
+        ? [
+            `💳 *PIX para pagamento do sinal:*`,
+            `• Chave PIX: ${company.pix_key}`,
+            `• Favorecido: ${company.pix_holder_name || "Não informado"}`,
+          ].join("\n")
+        : "";
+
 return [
   `🛍️ *Novo pedido pelo catálogo da ${company.name}*`,
   "",
@@ -936,6 +1033,8 @@ return [
   `💰 *Resumo do pedido:*`,
   `• Subtotal: ${formatPrice(productsSubtotal)}`,
   `• Total final: ${formatPrice(totalWithDelivery)}`,
+  ...(paymentAttentionText ? ["", paymentAttentionText] : []),
+  ...(pixText ? ["", pixText] : []),
   "",
   `✅ Posso seguir com o pedido?`,
 ].join("\n");
@@ -1067,6 +1166,7 @@ async function handleFinishCheckout() {
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
     setCheckoutModalOpen(false);
+    setCheckoutReviewStep(false);
     setCheckoutFormError("");
     setCheckoutName("");
     setCheckoutPhone("");
@@ -1130,11 +1230,14 @@ async function handleFinishCheckout() {
   const companyAddress = buildAddress(company);
   const returnDateInfo = getReturnDateInfo(selectedEventDate);
 
+
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#0f1d44_0%,#07111f_18%,#050814_45%,#050814_100%)] text-white">
 
 
       <section className="mx-auto max-w-[1500px] px-4 pb-10 pt-4 sm:px-5 lg:px-6">
+
         <div className="overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1018] shadow-[0_24px_80px_rgba(0,0,0,0.30)]">
           <div className="relative h-[220px] w-full sm:h-[280px] lg:h-[360px]">
             <CompanyMedia
@@ -2335,6 +2438,24 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                     </div>
                   </div>
 
+                  {company?.advance_payment_enabled && advancePercent > 0 ? (
+  <>
+    <div className="mt-3 h-px bg-white/10" />
+    <div className="mt-3 flex items-center justify-between text-sm text-white/75">
+      <span>Sinal ({advancePercent}%)</span>
+      <span className="font-semibold text-amber-300">
+        {formatPrice(advanceAmount)}
+      </span>
+    </div>
+    <div className="mt-2 flex items-center justify-between text-sm text-white/75">
+      <span>Restante</span>
+      <span className="font-semibold text-white">
+        {formatPrice(remainingAmount)}
+      </span>
+    </div>
+  </>
+) : null}
+
                   {company.delivery_enabled ? (
                     <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
                       <div className="flex items-start gap-3">
@@ -2584,6 +2705,27 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                   </p>
                 </div>
 
+                                {company?.advance_payment_enabled && advancePercent > 0 ? (
+                  <>
+                    <div className="mt-3 h-px bg-white/10" />
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-sm text-white/60">
+                        Sinal ({advancePercent}%)
+                      </p>
+                      <p className="text-sm font-semibold text-amber-300">
+                        {formatPrice(advanceAmount)}
+                      </p>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="text-sm text-white/60">Restante</p>
+                      <p className="text-sm font-semibold text-white">
+                        {formatPrice(remainingAmount)}
+                      </p>
+                    </div>
+                  </>
+                ) : null}
+
 <div className="mt-4 grid gap-3">
   <button
     type="button"
@@ -2705,6 +2847,91 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
     Observação
   </label>
 
+  {company?.advance_payment_enabled && advancePercent > 0 ? (
+  <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+    <p className="font-semibold text-amber-200">
+      Atenção para fechamento do pedido
+    </p>
+    <p className="mt-2">
+      Para confirmar o pedido, solicitamos o pagamento antecipado de{" "}
+      <span className="font-semibold">{advancePercent}%</span>.
+    </p>
+    <div className="mt-3 space-y-1 text-amber-100/90">
+      <p>
+        • Valor do sinal:{" "}
+        <span className="font-semibold text-white">
+          {formatPrice(advanceAmount)}
+        </span>
+      </p>
+      <p>
+        • Restante:{" "}
+        <span className="font-semibold text-white">
+          {formatPrice(remainingAmount)}
+        </span>
+      </p>
+    </div>
+  </div>
+) : null}
+
+{company?.pix_enabled && company?.pix_key ? (
+  <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="font-semibold text-emerald-200">
+          PIX para fechamento do pedido
+        </p>
+        <p className="mt-1 text-sm text-emerald-100/85">
+          Para seguir com o fechamento, realize o pagamento via PIX e depois clique no botão de envio para o WhatsApp.
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200/70">
+        Chave PIX
+      </p>
+      <p className="mt-1 break-all text-sm font-semibold text-white">
+        {company.pix_key}
+      </p>
+    </div>
+
+    <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200/70">
+        Favorecido
+      </p>
+      <p className="mt-1 text-sm font-semibold text-white">
+        {company.pix_holder_name || "Não informado"}
+      </p>
+    </div>
+
+    <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+      <p className="font-semibold text-amber-200">
+        Atenção
+      </p>
+      <p className="mt-1 leading-5">
+        Após fazer o PIX, envie o pedido no WhatsApp e, se desejar, encaminhe o comprovante na conversa para agilizar a confirmação.
+      </p>
+    </div>
+  </div>
+) : null}
+
+{company?.pix_enabled && company?.pix_key ? (
+  <button
+    type="button"
+    onClick={async () => {
+      try {
+        await navigator.clipboard.writeText(company.pix_key || "");
+        alert("Chave PIX copiada com sucesso.");
+      } catch {
+        alert("Não foi possível copiar a chave PIX.");
+      }
+    }}
+    className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/15"
+  >
+    Copiar chave PIX
+  </button>
+) : null}
+
   <textarea
     value={checkoutNotes}
     onChange={(e) => setCheckoutNotes(e.target.value)}
@@ -2749,14 +2976,93 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                 </div>
               </div>
 
-              {/* botão final */}
-              <button
-                type="button"
-                onClick={handleFinishCheckout}
-                className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#16c45b] px-5 text-sm font-semibold text-white transition hover:opacity-95"
-              >
-                Finalizar compra
-              </button>
+              {!checkoutReviewStep ? (
+                <button
+                  type="button"
+                  onClick={handleProceedToReviewStep}
+                  className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#16c45b] px-5 text-sm font-semibold text-white transition hover:opacity-95"
+                >
+                  Continuar
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  {company?.advance_payment_enabled && advancePercent > 0 ? (
+                    <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+                      <p className="font-semibold text-amber-200">
+                        Atenção para fechamento do pedido
+                      </p>
+
+                      <p className="mt-2 leading-6">
+                        Para confirmar o pedido, solicitamos o pagamento antecipado de{" "}
+                        <span className="font-semibold text-white">
+                          {advancePercent}%
+                        </span>.
+                      </p>
+
+                      <div className="mt-3 space-y-1 text-amber-100/90">
+                        <p>
+                          • Valor do sinal:{" "}
+                          <span className="font-semibold text-white">
+                            {formatPrice(advanceAmount)}
+                          </span>
+                        </p>
+                        <p>
+                          • Restante:{" "}
+                          <span className="font-semibold text-white">
+                            {formatPrice(remainingAmount)}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {company?.pix_enabled && company?.pix_key ? (
+                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100">
+                      <p className="font-semibold text-emerald-200">
+                        PIX para pagamento
+                      </p>
+
+                      <div className="mt-3 space-y-2 leading-6">
+                        <p>
+                          • Chave PIX:{" "}
+                          <span className="font-semibold break-all text-white">
+                            {company.pix_key}
+                          </span>
+                        </p>
+
+                        <p>
+                          • Favorecido:{" "}
+                          <span className="font-semibold text-white">
+                            {company.pix_holder_name || "Não informado"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutReviewStep(false)}
+                      className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                      Voltar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleFinishCheckout}
+                      className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#16c45b] px-5 text-sm font-semibold text-white transition hover:opacity-95"
+                    >
+                      {company?.pix_enabled
+                        ? "Já fiz o PIX • Enviar para o WhatsApp"
+                        : company?.advance_payment_enabled
+                        ? "Enviar pedido para o WhatsApp"
+                        : "Finalizar pedido"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>
