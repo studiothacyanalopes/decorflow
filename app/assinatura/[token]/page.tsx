@@ -120,18 +120,10 @@ export default function SignaturePage({
     void loadSignature();
   }, [token]);
 
-  useEffect(() => {
-    const handleViewport = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    handleViewport();
-    window.addEventListener("resize", handleViewport);
-
-    return () => {
-      window.removeEventListener("resize", handleViewport);
-    };
-  }, []);
+useEffect(() => {
+  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  setIsMobile(isMobileDevice);
+}, []);
 
   useEffect(() => {
     const run = () => setupCanvas();
@@ -686,7 +678,13 @@ export default function SignaturePage({
               </div>
             </div>
 
-            {mobileTab === "documento" ? <ContractPanel /> : <SignaturePanel />}
+           <div style={{ display: mobileTab === "documento" ? "block" : "none" }}>
+  <ContractPanel />
+</div>
+
+<div style={{ display: mobileTab === "assinatura" ? "block" : "none" }}>
+  <SignaturePanel />
+</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_420px]">
