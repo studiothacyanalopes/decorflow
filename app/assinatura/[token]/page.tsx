@@ -356,8 +356,38 @@ useEffect(() => {
       formData.append("signature_image", signatureBlob, "signature.png");
 
       if (selfie) formData.append("selfie", selfie);
-      if (documentFront) formData.append("document_front", documentFront);
-      if (documentBack) formData.append("document_back", documentBack);
+function sanitizeFileName(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .replace(/\s+/g, "-") // espaço → -
+    .replace(/[^a-zA-Z0-9.-]/g, "") // remove caracteres inválidos
+    .toLowerCase();
+}
+
+if (documentFront) {
+  const cleanName = sanitizeFileName(documentFront.name);
+  const cleanFile = new File([documentFront], cleanName, {
+    type: documentFront.type,
+  });
+  formData.append("document_front", cleanFile);
+}
+
+if (documentBack) {
+  const cleanName = sanitizeFileName(documentBack.name);
+  const cleanFile = new File([documentBack], cleanName, {
+    type: documentBack.type,
+  });
+  formData.append("document_back", cleanFile);
+}
+
+if (selfie) {
+  const cleanName = sanitizeFileName(selfie.name);
+  const cleanFile = new File([selfie], cleanName, {
+    type: selfie.type,
+  });
+  formData.append("selfie", cleanFile);
+}
 
       const response = await fetch(`/api/contracts/signature/${token}/sign`, {
         method: "POST",
