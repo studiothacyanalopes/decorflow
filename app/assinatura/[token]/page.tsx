@@ -336,6 +336,16 @@ useEffect(() => {
       setSaving(true);
       setResultMessage("");
 
+          if (
+      requestRow?.status?.toLowerCase() === "signed" ||
+      signer?.status?.toLowerCase() === "signed"
+    ) {
+      setResultMessage(
+        "Este contrato já foi assinado. Se precisar, use o botão abaixo para avisar a empresa no WhatsApp."
+      );
+      return;
+    }
+
       if (!accepted) {
         setResultMessage("Você precisa aceitar os termos antes de assinar.");
         return;
@@ -498,6 +508,10 @@ const companyData = useMemo(() => {
 const companyWhatsAppPhone = companyData.companyPhone;
 const companyWhatsAppName = companyData.companyName;
 
+
+
+
+
 const signedWhatsAppMessage = useMemo(() => {
   const signerNameValue = signatureName?.trim() || signer?.name || "Cliente";
   const contractTitleValue = requestRow?.contract_title || "contrato";
@@ -551,6 +565,9 @@ const signedWhatsAppUrl = useMemo(() => {
   const safeSigner = signer;
   const safeRequestRow = requestRow;
 
+  const isAlreadySigned =
+  safeRequestRow.status?.toLowerCase() === "signed" ||
+  safeSigner.status?.toLowerCase() === "signed";
 
 const contractPanelJsx = (
     <section className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -577,6 +594,8 @@ const contractPanelJsx = (
     </section>
   );
 
+
+
   const signaturePanelJsx = (
     <aside className="min-w-0">
       <div className="lg:sticky lg:top-6">
@@ -593,6 +612,13 @@ const contractPanelJsx = (
             </div>
           </div>
           <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
+
+    {isAlreadySigned ? (
+  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700">
+    Este contrato já foi assinado. Caso precise, você pode avisar a empresa no WhatsApp pelo botão abaixo.
+  </div>
+) : null}
+
             <FieldLabel htmlFor="signature-name">Nome para assinatura</FieldLabel>
             <input
               id="signature-name"
@@ -659,10 +685,10 @@ const contractPanelJsx = (
               <span className="text-sm leading-6 text-slate-700">Declaro que li o documento e concordo com os termos apresentados.</span>
             </label>
 
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={saving}
+<button
+  type="button"
+  onClick={handleSubmit}
+  disabled={saving || isAlreadySigned}
               className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -679,16 +705,24 @@ const contractPanelJsx = (
   >
     <div>{resultMessage}</div>
 
-    {resultMessage.toLowerCase().includes("sucesso") && signedWhatsAppUrl ? (
-<a
-  href={signedWhatsAppUrl}
-  target={isMobile ? "_self" : "_blank"}
-  rel="noreferrer"
-  className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
->
-  Avisar empresa no WhatsApp
-</a>
-    ) : null}
+{(signedWhatsAppUrl &&
+  (
+    resultMessage.toLowerCase().includes("sucesso") ||
+    resultMessage.toLowerCase().includes("já foi assinado") ||
+    isAlreadySigned
+  )) ? (
+  <a
+    href={signedWhatsAppUrl}
+    target={isMobile ? "_self" : "_blank"}
+    rel="noreferrer"
+    className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+  >
+    Avisar empresa no WhatsApp
+  </a>
+) : null}
+
+
+
   </div>
 ) : null}
 
