@@ -659,16 +659,29 @@ function buildContractHtml(params: {
         </div>
 
         <div class="signatures">
-<div class="sign-line">
-  <div style="font-weight:700;">${escapeHtml(companyName)}</div>
-  ${
-    companyDocument
-      ? `<div style="margin-top:6px;">Documento: ${escapeHtml(companyDocument)}</div>`
-      : ""
-  }
-</div>
+          <div class="sign-line">
+            <div style="font-weight:700;">${escapeHtml(companyName)}</div>
+            ${
+              companyDocument
+                ? `<div style="margin-top:6px;">Documento: ${escapeHtml(companyDocument)}</div>`
+                : ""
+            }
+          </div>
 
           <div class="sign-line">
+            ${
+              order.signature_image_url
+                ? `
+                  <div style="margin-bottom:12px;display:flex;justify-content:center;">
+                    <img
+                      src="${escapeHtml(order.signature_image_url)}"
+                      alt="Assinatura digital"
+                      style="max-width:220px;max-height:110px;object-fit:contain;"
+                    />
+                  </div>
+                `
+                : ""
+            }
             <div style="font-weight:700;">${escapeHtml(clientName)}</div>
             <div style="margin-top:6px;">Telefone: ${escapeHtml(clientPhone)}</div>
           </div>
@@ -2136,29 +2149,39 @@ async function handleCreateSignatureRequest() {
                                     {formatLongDate(selectedOrder.created_at)}
                                   </p>
 
-                                  <div className="mt-8 grid gap-6 md:grid-cols-2">
-                                    <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-center">
-                                      <div className="border-t border-slate-300 pt-4">
-                                        <p className="font-semibold text-slate-900">
-                                          {company?.name || "Minha empresa"}
-                                        </p>
-                                        <p className="mt-1 text-sm text-slate-600">
-                                          Documento: {getCompanyDocument(company)}
-                                        </p>
-                                      </div>
-                                    </div>
+<div className="mt-8 grid gap-6 md:grid-cols-2">
+  <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-center">
+    <div className="border-t border-slate-300 pt-4">
+      <p className="font-semibold text-slate-900">
+        {company?.name || "Minha empresa"}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
+        Documento: {getCompanyDocument(company)}
+      </p>
+    </div>
+  </div>
 
-                                    <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-center">
-                                      <div className="border-t border-slate-300 pt-4">
-                                        <p className="font-semibold text-slate-900">
-                                          {selectedOrder.client_name || "Cliente"}
-                                        </p>
-                                        <p className="mt-1 text-sm text-slate-600">
-                                          Telefone: {selectedOrder.client_phone || "—"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
+  <div className="rounded-[22px] border border-slate-200 bg-white p-5 text-center">
+    {selectedOrder.signature_image_url ? (
+      <div className="mb-4 flex justify-center">
+        <img
+          src={selectedOrder.signature_image_url}
+          alt="Assinatura digital"
+          className="max-h-[110px] w-auto object-contain"
+        />
+      </div>
+    ) : null}
+
+    <div className="border-t border-slate-300 pt-4">
+      <p className="font-semibold text-slate-900">
+        {selectedOrder.client_name || "Cliente"}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
+        Telefone: {selectedOrder.client_phone || "—"}
+      </p>
+    </div>
+  </div>
+</div>
                                 </div>
                               </div>
                             </PanelCard>
