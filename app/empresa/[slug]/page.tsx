@@ -1220,9 +1220,16 @@ async function handleFinishCheckout() {
     }
 
 
-    const whatsappUrl = buildWhatsAppUrl(company.whatsapp, whatsappMessage);
+const whatsappUrl = buildWhatsAppUrl(company.whatsapp, whatsappMessage);
 
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+// Compatível com iOS Safari - window.open após async é bloqueado
+const link = document.createElement("a");
+link.href = whatsappUrl;
+link.target = "_blank";
+link.rel = "noopener noreferrer";
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
 
     setCheckoutModalOpen(false);
     setCheckoutReviewStep(false);
