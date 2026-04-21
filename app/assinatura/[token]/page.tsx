@@ -481,20 +481,24 @@ useEffect(() => {
               </FieldLabel>
               <input
                 id="signature-name"
-                value={signatureName}
+                defaultValue={signatureName}
+                onBlur={(e) => setSignatureName(e.target.value)}
                 onChange={(e) => setSignatureName(e.target.value)}
                 className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
                 placeholder="Seu nome completo"
               />
 
-              <FieldLabel htmlFor="signature-document">Documento</FieldLabel>
-              <input
-                id="signature-document"
-                value={signatureDocument}
-                onChange={(e) => setSignatureDocument(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
-                placeholder="CPF ou documento"
-              />
+<FieldLabel htmlFor="signature-document">Documento</FieldLabel>
+<input
+  id="signature-document"
+  defaultValue={signatureDocument}
+  onBlur={(e) => setSignatureDocument(e.target.value)}
+  onChange={(e) => setSignatureDocument(e.target.value)}
+  autoComplete="off"
+  inputMode="numeric"
+  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-indigo-400"
+  placeholder="CPF ou documento"
+/>
 
               <div className="pt-1">
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
