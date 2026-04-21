@@ -61,6 +61,41 @@ const documentFront = formData.get("document_front");
 const documentBack = formData.get("document_back");
 const signatureImage = formData.get("signature_image");
 
+console.log("DEBUG SIGN FILES:", {
+  selfie:
+    selfie instanceof File
+      ? {
+          name: selfie.name,
+          type: selfie.type,
+          size: selfie.size,
+        }
+      : null,
+  documentFront:
+    documentFront instanceof File
+      ? {
+          name: documentFront.name,
+          type: documentFront.type,
+          size: documentFront.size,
+        }
+      : null,
+  documentBack:
+    documentBack instanceof File
+      ? {
+          name: documentBack.name,
+          type: documentBack.type,
+          size: documentBack.size,
+        }
+      : null,
+  signatureImage:
+    signatureImage instanceof File
+      ? {
+          name: signatureImage.name,
+          type: signatureImage.type,
+          size: signatureImage.size,
+        }
+      : null,
+});
+
     async function uploadIfExists(fileValue: FormDataEntryValue | null, suffix: string) {
       if (!(fileValue instanceof File) || fileValue.size === 0) return null;
 
