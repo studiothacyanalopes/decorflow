@@ -36,6 +36,7 @@ import {
   Camera,
   IdCard,
   Copy,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -715,9 +716,11 @@ export default function DecorPedidosPage() {
   });
 
   const [signatureModalOpen, setSignatureModalOpen] = useState(false);
-const [creatingSignature, setCreatingSignature] = useState(false);
-const [signatureLinks, setSignatureLinks] = useState<SignatureLinkItem[]>([]);
-const [signatureSigners, setSignatureSigners] = useState<SignatureSignerDraft[]>([]);
+  const [creatingSignature, setCreatingSignature] = useState(false);
+  const [signatureLinks, setSignatureLinks] = useState<SignatureLinkItem[]>([]);
+  const [signatureSigners, setSignatureSigners] = useState<SignatureSignerDraft[]>([]);
+  const [deleteOrderModalOpen, setDeleteOrderModalOpen] = useState(false);
+  const [orderPendingDelete, setOrderPendingDelete] = useState<Order | null>(null);
 
   useEffect(() => {
     loadOrders();
@@ -978,6 +981,156 @@ setCompany({
     );
   }
 
+ async function handleDeleteOrder(order: Order) {
+  try {
+    setSavingId(order.id);
+    setStatus({ type: "", message: "" });
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      setStatus({
+        type: "error",
+        message: "Não foi possível identificar o usuário logado para excluir o pedido.",
+      });
+      return;
+    }
+
+    const { data: membership, error: membershipError } = await supabase
+      .from("company_users")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (membershipError || !membership?.company_id) {
+      setStatus({
+        type: "error",
+        message: "Não foi possível identificar a empresa do usuário para excluir o pedido.",
+      });
+      return;
+    }
+
+    const resolvedCompanyId = membership.company_id;
+
+    const { error: eventsError } = await supabase
+      .from("decor_signature_events")
+      .delete()
+      .eq("order_id", order.id);
+
+    if (eventsError) {
+      setStatus({
+        type: "error",
+        message: `Não foi possível excluir os eventos da assinatura. ${eventsError.message || ""}`,
+      });
+      return;
+    }
+
+    const { error: signersError } = await supabase
+      .from("decor_signature_signers")
+      .delete()
+      .eq("order_id", order.id);
+
+    if (signersError) {
+      setStatus({
+        type: "error",
+        message: `Não foi possível excluir os assinantes do pedido. ${signersError.message || ""}`,
+      });
+      return;
+    }
+
+    const { error: requestsError } = await supabase
+      .from("decor_signature_requests")
+      .delete()
+      .eq("order_id", order.id);
+
+    if (requestsError) {
+      setStatus({
+        type: "error",
+        message: `Não foi possível excluir a solicitação de assinatura. ${requestsError.message || ""}`,
+      });
+      return;
+    }
+
+    const { error: costsError } = await supabase
+      .from("decor_order_costs")
+      .delete()
+      .eq("order_id", order.id);
+
+    if (costsError) {
+      setStatus({
+        type: "error",
+        message: `Não foi possível excluir os custos do pedido. ${costsError.message || ""}`,
+      });
+      return;
+    }
+
+    const { error: itemsError } = await supabase
+      .from("decor_order_items")
+      .delete()
+      .eq("order_id", order.id);
+
+    if (itemsError) {
+      setStatus({
+        type: "error",
+        message: `Não foi possível excluir os itens do pedido. ${itemsError.message || ""}`,
+      });
+      return;
+    }
+
+    const { data: deletedRows, error: orderError } = await supabase
+      .from("decor_orders")
+      .delete()
+      .eq("id", order.id)
+      .eq("company_id", resolvedCompanyId)
+      .select("id");
+
+    if (orderError) {
+      setStatus({
+        type: "error",
+        message: `Não foi possível excluir o pedido. ${orderError.message || ""}`,
+      });
+      return;
+    }
+
+    if (!deletedRows || deletedRows.length === 0) {
+      setStatus({
+        type: "error",
+        message:
+          "O pedido não foi removido do banco. Normalmente isso acontece por RLS/política de DELETE na tabela decor_orders.",
+      });
+      return;
+    }
+
+    const nextOrders = orders.filter((item) => item.id !== order.id);
+    const nextSelected = nextOrders[0] || null;
+
+    setOrders(nextOrders);
+    setSelectedOrder(nextSelected);
+    selectedOrderIdRef.current = nextSelected?.id || null;
+
+    setDeleteOrderModalOpen(false);
+    setOrderPendingDelete(null);
+
+    setStatus({
+      type: "success",
+      message: `Pedido ${order.order_number} excluído com sucesso.`,
+    });
+
+    await loadOrders(nextSelected?.id, false);
+  } catch (error: any) {
+    setStatus({
+      type: "error",
+      message:
+        error?.message || "Ocorreu um erro inesperado ao excluir o pedido.",
+    });
+  } finally {
+    setSavingId(null);
+  }
+}
+
   async function handleAddCost(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -1223,7 +1376,6 @@ async function handleCreateSignatureRequest() {
       </main>
     );
   }
-
   return (
     <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
       <div className="mx-auto max-w-[1680px] px-4 py-4 sm:px-6 lg:px-8">
@@ -1505,6 +1657,23 @@ async function handleCreateSignatureRequest() {
                                 Reabrir mensagem
                               </a>
                             ) : null}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOrderPendingDelete(selectedOrder);
+                                setDeleteOrderModalOpen(true);
+                              }}
+                              disabled={savingId === selectedOrder.id}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {savingId === selectedOrder.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                              Excluir pedido
+                            </button>
                           </div>
                         </div>
 
@@ -2560,6 +2729,74 @@ async function handleCreateSignatureRequest() {
                   <Link2 className="h-4 w-4" />
                 )}
                 Gerar links de assinatura
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteOrderModalOpen && orderPendingDelete ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_25px_80px_rgba(15,23,42,0.28)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-500">
+                  Excluir pedido
+                </p>
+                <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
+                  Confirmar exclusão
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Tem certeza que deseja excluir o pedido{" "}
+                  <span className="font-semibold text-slate-950">
+                    {orderPendingDelete.order_number}
+                  </span>{" "}
+                  de{" "}
+                  <span className="font-semibold text-slate-950">
+                    {orderPendingDelete.client_name}
+                  </span>
+                  ? Essa ação não pode ser desfeita.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (savingId) return;
+                  setDeleteOrderModalOpen(false);
+                  setOrderPendingDelete(null);
+                }}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (savingId) return;
+                  setDeleteOrderModalOpen(false);
+                  setOrderPendingDelete(null);
+                }}
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDeleteOrder(orderPendingDelete)}
+                disabled={savingId === orderPendingDelete.id}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingId === orderPendingDelete.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Confirmar exclusão
               </button>
             </div>
           </div>
