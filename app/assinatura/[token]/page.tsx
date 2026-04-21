@@ -149,7 +149,9 @@ export default function SignaturePage({
   const [documentFront, setDocumentFront] = useState<File | null>(null);
   const [documentBack, setDocumentBack] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
-  const [resultMessage, setResultMessage] = useState("");
+const [resultMessage, setResultMessage] = useState("");
+  const [postSignWhatsAppUrl, setPostSignWhatsAppUrl] = useState("");
+
   const [isMobile, setIsMobile] = useState(false);
   const [mobileTab, setMobileTab] = useState<"documento" | "assinatura">(
     "documento"
@@ -423,19 +425,15 @@ const successMessage = data?.fully_signed
   ? "Assinatura concluída com sucesso. Documento finalizado."
   : "Sua assinatura foi registrada com sucesso.";
 
-const extractedCompanyData = extractCompanyDataFromContractHtml(
-  data?.request?.contract_html || requestRow?.contract_html || ""
-);
+const htmlParaExtrair =
+  data?.request?.contract_html || requestRow?.contract_html || "";
 
-const companyPhone =
-  extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
+const extractedCompanyData = extractCompanyDataFromContractHtml(htmlParaExtrair);
 
-const companyName =
-  extractedCompanyData.companyName ||
-  companyWhatsAppName ||
-  "empresa";
+const companyPhone = extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
+const companyName = extractedCompanyData.companyName || companyWhatsAppName || "empresa";
 
-const whatsappMessage = [
+const whatsappMessageFinal = [
   `Olá, ${companyName}!`,
   "",
   `Acabei de assinar digitalmente o contrato "${data?.request?.contract_title || requestRow?.contract_title || "contrato"}".`,
@@ -447,15 +445,17 @@ const whatsappMessage = [
   .filter(Boolean)
   .join("\n");
 
-const whatsappUrl = buildWhatsAppUrl(companyPhone, whatsappMessage);
+const builtWhatsAppUrl = companyPhone
+  ? buildWhatsAppUrl(companyPhone, whatsappMessageFinal)
+  : "";
 
-if (whatsappUrl) {
-  setResultMessage(
-    `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
-  );
-} else {
-  setResultMessage(successMessage);
-}
+setPostSignWhatsAppUrl(builtWhatsAppUrl);
+
+setResultMessage(
+  builtWhatsAppUrl
+    ? `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
+    : successMessage
+);
 
 await loadSignature();
 
@@ -732,18 +732,13 @@ const contractPanelJsx = (
   >
     <div>{resultMessage}</div>
 
-{(signedWhatsAppUrl &&
-  (
-    resultMessage.toLowerCase().includes("sucesso") ||
-    resultMessage.toLowerCase().includes("já foi assinado") ||
-    isAlreadySigned
-  )) ? (
-  <a
-    href={signedWhatsAppUrl}
-    target={isMobile ? "_self" : "_blank"}
+{postSignWhatsAppUrl ? (
+  <a>
+    href={postSignWhatsAppUrl}
+    target="_blank"
     rel="noreferrer"
     className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-  >
+  
     Avisar empresa no WhatsApp
   </a>
 ) : null}
