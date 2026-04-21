@@ -2879,7 +2879,7 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
             checkoutModalOpen ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
           }`}
         >
-          <div className="flex min-h-full items-start justify-center sm:items-center"></div>
+<div className="flex min-h-full items-start justify-center sm:items-center">
           <div className="w-full max-w-xl rounded-[30px] border border-white/10 bg-[#0b1018] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)]">
             
             {/* header */}
@@ -3167,7 +3167,8 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
                 </div>
               )}
 
-            </div>
+</div>
+          </div>
           </div>
         </div>
       </div>
