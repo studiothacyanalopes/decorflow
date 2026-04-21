@@ -127,6 +127,10 @@ type Order = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  signature_image_url?: string | null;
+  selfie_url?: string | null;
+  document_front_url?: string | null;
+  document_back_url?: string | null;
   decor_order_items?: OrderItem[];
   decor_order_costs?: OrderCost[];
 };
@@ -2012,6 +2016,11 @@ async function handleCreateSignatureRequest() {
                                   </div>
                                 </div>
 
+
+
+
+
+
                                 <div className="border-b border-slate-200 px-5 py-5">
                                   <h4 className="text-center text-[28px] font-semibold tracking-[-0.04em] text-slate-950">
                                     {selectedOrder.contract_model_name || "Contrato de locação"}
@@ -2153,6 +2162,89 @@ async function handleCreateSignatureRequest() {
                                 </div>
                               </div>
                             </PanelCard>
+
+
+<PanelCard
+  title="Comprovante de assinatura"
+  subtitle="Evidência interna da assinatura e anexos enviados."
+  icon={<FileSignature className="h-5 w-5 text-slate-700" />}
+>
+  {selectedOrder.contract_status !== "signed" ? (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+      Este contrato ainda não foi assinado.
+    </div>
+  ) : (
+    <div className="space-y-5">
+      {selectedOrder.signature_image_url ? (
+        <div>
+          <p className="mb-2 text-sm font-semibold text-slate-900">
+            Assinatura digital
+          </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3">
+            <img
+              src={selectedOrder.signature_image_url}
+              alt="Assinatura digital"
+              className="max-h-[220px] w-full object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {selectedOrder.selfie_url ? (
+        <div>
+          <p className="mb-2 text-sm font-semibold text-slate-900">
+            Selfie do assinante
+          </p>
+          <img
+            src={selectedOrder.selfie_url}
+            alt="Selfie do assinante"
+            className="w-full rounded-2xl border border-slate-200"
+          />
+        </div>
+      ) : null}
+
+      {selectedOrder.document_front_url || selectedOrder.document_back_url ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {selectedOrder.document_front_url ? (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Frente do documento
+              </p>
+              <img
+                src={selectedOrder.document_front_url}
+                alt="Frente do documento"
+                className="w-full rounded-2xl border border-slate-200"
+              />
+            </div>
+          ) : null}
+
+          {selectedOrder.document_back_url ? (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Verso do documento
+              </p>
+              <img
+                src={selectedOrder.document_back_url}
+                alt="Verso do documento"
+                className="w-full rounded-2xl border border-slate-200"
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!selectedOrder.signature_image_url &&
+      !selectedOrder.selfie_url &&
+      !selectedOrder.document_front_url &&
+      !selectedOrder.document_back_url ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+          O contrato foi assinado, mas ainda não há URLs de evidência salvas neste pedido.
+        </div>
+      ) : null}
+    </div>
+  )}
+</PanelCard>
+
                           </div>
                         </div>
                       ) : null}

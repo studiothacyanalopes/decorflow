@@ -202,6 +202,24 @@ if (signatureImagePath) evidence.signature_image = signatureImagePath;
 
     const allSigned = (allSigners || []).every((item) => item.status === "signed");
 
+    const publicBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/contract-signature-evidence/`;
+
+    const signatureImageUrl = evidence.signature_image
+      ? `${publicBase}${evidence.signature_image}`
+      : null;
+
+    const selfieUrl = evidence.selfie
+      ? `${publicBase}${evidence.selfie}`
+      : null;
+
+    const documentFrontUrl = evidence.document_front
+      ? `${publicBase}${evidence.document_front}`
+      : null;
+
+    const documentBackUrl = evidence.document_back
+      ? `${publicBase}${evidence.document_back}`
+      : null;
+
     if (allSigned) {
       await supabase
         .from("decor_signature_requests")
@@ -216,6 +234,10 @@ if (signatureImagePath) evidence.signature_image = signatureImagePath;
         .update({
           contract_status: "signed",
           contract_signed_at: now,
+          signature_image_url: signatureImageUrl,
+          selfie_url: selfieUrl,
+          document_front_url: documentFrontUrl,
+          document_back_url: documentBackUrl,
         })
         .eq("id", signer.order_id);
     } else {
@@ -225,6 +247,16 @@ if (signatureImagePath) evidence.signature_image = signatureImagePath;
           status: "partially_signed",
         })
         .eq("id", signer.request_id);
+
+      await supabase
+        .from("decor_orders")
+        .update({
+          signature_image_url: signatureImageUrl,
+          selfie_url: selfieUrl,
+          document_front_url: documentFrontUrl,
+          document_back_url: documentBackUrl,
+        })
+        .eq("id", signer.order_id);
     }
 
     return NextResponse.json({
