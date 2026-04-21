@@ -338,15 +338,15 @@ useEffect(() => {
       setSaving(true);
       setResultMessage("");
 
-          if (
-      requestRow?.status?.toLowerCase() === "signed" ||
-      signer?.status?.toLowerCase() === "signed"
-    ) {
-      setResultMessage(
-        "Este contrato já foi assinado. Se precisar, use o botão abaixo para avisar a empresa no WhatsApp."
-      );
-      return;
-    }
+      if (
+        requestRow?.status?.toLowerCase() === "signed" ||
+        signer?.status?.toLowerCase() === "signed"
+      ) {
+        setResultMessage(
+          "Este contrato já foi assinado. Se precisar, use o botão abaixo para avisar a empresa no WhatsApp."
+        );
+        return;
+      }
 
       if (!accepted) {
         setResultMessage("Você precisa aceitar os termos antes de assinar.");
@@ -363,6 +363,15 @@ useEffect(() => {
         return;
       }
 
+      function sanitizeFileName(name: string) {
+        return name
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/[^a-zA-Z0-9.-]/g, "")
+          .toLowerCase();
+      }
+
       const formData = new FormData();
       formData.append("signature_name", signatureName);
       formData.append("signature_document", signatureDocument);
@@ -373,46 +382,45 @@ useEffect(() => {
       );
       formData.append("signature_image", signatureBlob, "signature.png");
 
+      if (documentFront) {
+        const cleanName = sanitizeFileName(documentFront.name);
+        const cleanFile = new File([documentFront], cleanName, {
+          type: documentFront.type,
+        });
+        formData.append("document_front", cleanFile);
+      }
 
-function sanitizeFileName(name: string) {
-  return name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // remove acentos
-    .replace(/\s+/g, "-") // espaço → -
-    .replace(/[^a-zA-Z0-9.-]/g, "") // remove caracteres inválidos
-    .toLowerCase();
-}
+      if (documentBack) {
+        const cleanName = sanitizeFileName(documentBack.name);
+        const cleanFile = new File([documentBack], cleanName, {
+          type: documentBack.type,
+        });
+        formData.append("document_back", cleanFile);
+      }
 
-if (documentFront) {
-  const cleanName = sanitizeFileName(documentFront.name);
-  const cleanFile = new File([documentFront], cleanName, {
-    type: documentFront.type,
-  });
-  formData.append("document_front", cleanFile);
-}
-
-if (documentBack) {
-  const cleanName = sanitizeFileName(documentBack.name);
-  const cleanFile = new File([documentBack], cleanName, {
-    type: documentBack.type,
-  });
-  formData.append("document_back", cleanFile);
-}
-
-if (selfie) {
-  const cleanName = sanitizeFileName(selfie.name);
-  const cleanFile = new File([selfie], cleanName, {
-    type: selfie.type,
-  });
-  formData.append("selfie", cleanFile);
-}
+      if (selfie) {
+        const cleanName = sanitizeFileName(selfie.name);
+        const cleanFile = new File([selfie], cleanName, {
+          type: selfie.type,
+        });
+        formData.append("selfie", cleanFile);
+      }
 
       const response = await fetch(`/api/contracts/signature/${token}/sign`, {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
+      let data: any = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        setResultMessage(
+          "Não foi possível concluir a assinatura. A resposta do servidor veio em formato inválido."
+        );
+        return;
+      }
 
       if (!response.ok || !data?.ok) {
         setResultMessage(
@@ -421,55 +429,62 @@ if (selfie) {
         return;
       }
 
-const successMessage = data?.fully_signed
-  ? "Assinatura concluída com sucesso. Documento finalizado."
-  : "Sua assinatura foi registrada com sucesso.";
+      const successMessage = data?.fully_signed
+        ? "Assinatura concluída com sucesso. Documento finalizado."
+        : "Sua assinatura foi registrada com sucesso.";
 
-const htmlParaExtrair =
-  data?.request?.contract_html || requestRow?.contract_html || "";
+      const htmlParaExtrair =
+        data?.request?.contract_html || requestRow?.contract_html || "";
 
-const extractedCompanyData = extractCompanyDataFromContractHtml(htmlParaExtrair);
+      const extractedCompanyData =
+        extractCompanyDataFromContractHtml(htmlParaExtrair);
 
-const companyPhone =
-  extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
+      const companyPhone =
+        extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
 
-const companyName =
-  extractedCompanyData.companyName || companyWhatsAppName || "empresa";
+      const companyName =
+        extractedCompanyData.companyName || companyWhatsAppName || "empresa";
 
-const contractTitleValue =
-  data?.request?.contract_title || requestRow?.contract_title || "contrato";
+      const contractTitleValue =
+        data?.request?.contract_title ||
+        requestRow?.contract_title ||
+        "contrato";
 
-const signerNameValue =
-  signatureName?.trim() || signer?.name || "Cliente";
+      const signerNameValue =
+        signatureName?.trim() || signer?.name || "Cliente";
 
-const signerDocumentValue = signatureDocument?.trim();
+      const signerDocumentValue = signatureDocument?.trim();
 
-const whatsappMessageFinal = [
-  `Olá, ${companyName}!`,
-  "",
-  `O contrato "${contractTitleValue}" foi assinado digitalmente com sucesso.`,
-  `Assinante: ${signerNameValue}`,
-  signerDocumentValue ? `Documento: ${signerDocumentValue}` : "",
-  "",
-  "Peço, por favor, que confirmem o recebimento da assinatura.",
-]
-  .filter(Boolean)
-  .join("\n");
+      const whatsappMessageFinal = [
+        `Olá, ${companyName}!`,
+        "",
+        `O contrato "${contractTitleValue}" foi assinado digitalmente com sucesso.`,
+        `Assinante: ${signerNameValue}`,
+        signerDocumentValue ? `Documento: ${signerDocumentValue}` : "",
+        "",
+        "Peço, por favor, que confirmem o recebimento da assinatura.",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
-const builtWhatsAppUrl = companyPhone
-  ? buildWhatsAppUrl(companyPhone, whatsappMessageFinal)
-  : "";
+      const builtWhatsAppUrl = companyPhone
+        ? buildWhatsAppUrl(companyPhone, whatsappMessageFinal)
+        : "";
 
-setPostSignWhatsAppUrl(builtWhatsAppUrl);
+      setPostSignWhatsAppUrl(builtWhatsAppUrl);
 
-setResultMessage(
-  builtWhatsAppUrl
-    ? `${successMessage} Agora toque no botão abaixo para notificar a empresa sobre a assinatura.`
-    : `${successMessage} Não foi possível montar o link do WhatsApp da empresa.`
-);
+      setResultMessage(
+        builtWhatsAppUrl
+          ? `${successMessage} Agora toque no botão abaixo para notificar a empresa sobre a assinatura.`
+          : `${successMessage} Não foi possível montar o link do WhatsApp da empresa.`
+      );
 
-await loadSignature();
-
+      await loadSignature();
+    } catch (error) {
+      console.error("Erro ao concluir assinatura:", error);
+      setResultMessage(
+        "Ocorreu um erro ao concluir a assinatura. No celular isso pode acontecer por falha de conexão, upload da imagem ou erro interno do servidor. Tente novamente."
+      );
     } finally {
       setSaving(false);
     }
