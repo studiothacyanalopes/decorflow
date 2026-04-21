@@ -419,13 +419,9 @@ if (selfie) {
         return;
       }
 
-      const successMessage = data?.fully_signed
+const successMessage = data?.fully_signed
   ? "Assinatura concluída com sucesso. Documento finalizado."
   : "Sua assinatura foi registrada com sucesso.";
-
-setResultMessage(successMessage);
-
-await loadSignature();
 
 const extractedCompanyData = extractCompanyDataFromContractHtml(
   data?.request?.contract_html || requestRow?.contract_html || ""
@@ -453,30 +449,15 @@ const whatsappMessage = [
 
 const whatsappUrl = buildWhatsAppUrl(companyPhone, whatsappMessage);
 
-console.log("DEBUG SIGNATURE WHATSAPP:", {
-  companyName,
-  companyPhone,
-  whatsappUrl,
-  contractTitle: data?.request?.contract_title || requestRow?.contract_title || "contrato",
-});
-
 if (whatsappUrl) {
-  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(
-    navigator.userAgent || ""
-  );
-
-setResultMessage(
+  setResultMessage(
     `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
   );
-
-  try {
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  } catch {
-    // fallback silencioso — botão na tela resolve
-  }
-
-  return;
+} else {
+  setResultMessage(successMessage);
 }
+
+await loadSignature();
 
     } finally {
       setSaving(false);
