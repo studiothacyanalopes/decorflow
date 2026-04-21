@@ -385,8 +385,13 @@ const extractedCompanyData = extractCompanyDataFromContractHtml(
   data?.request?.contract_html || requestRow?.contract_html || ""
 );
 
-const companyPhone = extractedCompanyData.companyPhone;
-const companyName = extractedCompanyData.companyName || "empresa";
+const companyPhone =
+  extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
+
+const companyName =
+  extractedCompanyData.companyName ||
+  companyWhatsAppName ||
+  "empresa";
 
 const whatsappMessage = [
   `Olá, ${companyName}!`,
@@ -402,10 +407,15 @@ const whatsappMessage = [
 
 const whatsappUrl = buildWhatsAppUrl(companyPhone, whatsappMessage);
 
+console.log("DEBUG SIGNATURE WHATSAPP:", {
+  companyName,
+  companyPhone,
+  whatsappUrl,
+  contractTitle: data?.request?.contract_title || requestRow?.contract_title || "contrato",
+});
+
 if (whatsappUrl) {
-  setTimeout(() => {
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  }, 700);
+  window.location.href = whatsappUrl;
 }
 
     } finally {
