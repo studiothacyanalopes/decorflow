@@ -29,6 +29,7 @@ type CompanyForm = {
   instagram: string;
   whatsapp: string;
   email_publico: string;
+  document: string;
   address_line: string;
   address_number: string;
   address_complement: string;
@@ -52,7 +53,7 @@ type CompanyForm = {
   delivery_max_distance_km: string;
   advance_payment_enabled: boolean;
   advance_payment_percent: string;
-    pix_enabled: boolean;
+  pix_enabled: boolean;
   pix_key: string;
   pix_holder_name: string;
 };
@@ -63,6 +64,7 @@ const initialForm: CompanyForm = {
   instagram: "",
   whatsapp: "",
   email_publico: "",
+  document: "",
   address_line: "",
   address_number: "",
   address_complement: "",
@@ -86,7 +88,7 @@ const initialForm: CompanyForm = {
   delivery_max_distance_km: "10",
   advance_payment_enabled: false,
   advance_payment_percent: "30",
-    pix_enabled: false,
+  pix_enabled: false,
   pix_key: "",
   pix_holder_name: "",
 };
@@ -167,44 +169,45 @@ const [status, setStatus] = useState<{
       }
 
       const { data: company, error: companyError } = await supabase
-        .from("companies")
-        .select(
-          `
-            id,
-            name,
-            instagram,
-            whatsapp,
-            email_publico,
-            address_line,
-            address_number,
-            address_complement,
-            neighborhood,
-            city,
-            state,
-            zip_code,
-            slug,
-            public_description,
-            public_logo_url,
-            public_cover_url,
-            public_link_enabled,
-            public_link_title,
-            public_link_subtitle,
-            business_hours,
-            maps_link,
-            delivery_enabled,
-            delivery_price_per_km,
-            delivery_minimum_fee,
-            delivery_round_trip_multiplier,
-            delivery_max_distance_km,
-            advance_payment_enabled,
-            advance_payment_percent,
-            pix_enabled,
-            pix_key,
-            pix_holder_name
-          `
-        )
-        .eq("id", membership.company_id)
-        .single();
+  .from("companies")
+  .select(
+    `
+      id,
+      name,
+      instagram,
+      whatsapp,
+      email_publico,
+      document,
+      address_line,
+      address_number,
+      address_complement,
+      neighborhood,
+      city,
+      state,
+      zip_code,
+      slug,
+      public_description,
+      public_logo_url,
+      public_cover_url,
+      public_link_enabled,
+      public_link_title,
+      public_link_subtitle,
+      business_hours,
+      maps_link,
+      delivery_enabled,
+      delivery_price_per_km,
+      delivery_minimum_fee,
+      delivery_round_trip_multiplier,
+      delivery_max_distance_km,
+      advance_payment_enabled,
+      advance_payment_percent,
+      pix_enabled,
+      pix_key,
+      pix_holder_name
+    `
+  )
+  .eq("id", membership.company_id)
+  .single();
 
       if (companyError || !company) {
         setStatus({
@@ -215,54 +218,55 @@ const [status, setStatus] = useState<{
         return;
       }
 
-      setForm({
-        id: company.id ?? "",
-        name: company.name ?? "",
-        instagram: company.instagram ?? "",
-        whatsapp: company.whatsapp ?? "",
-        email_publico: company.email_publico ?? "",
-        address_line: company.address_line ?? "",
-        address_number: company.address_number ?? "",
-        address_complement: company.address_complement ?? "",
-        neighborhood: company.neighborhood ?? "",
-        city: company.city ?? "",
-        state: company.state ?? "",
-        zip_code: company.zip_code ?? "",
-        slug: company.slug ?? slugify(company.name ?? ""),
-        public_description: company.public_description ?? "",
-        public_logo_url: company.public_logo_url ?? "",
-        public_cover_url: company.public_cover_url ?? "",
-        public_link_enabled: company.public_link_enabled ?? false,
-        public_link_title: company.public_link_title ?? "",
-        public_link_subtitle: company.public_link_subtitle ?? "",
-        business_hours: company.business_hours ?? "",
-        maps_link: company.maps_link ?? "",
-        delivery_enabled: company.delivery_enabled ?? false,
-        delivery_price_per_km:
-          company.delivery_price_per_km != null
-            ? String(company.delivery_price_per_km)
-            : "1.40",
-        delivery_minimum_fee:
-          company.delivery_minimum_fee != null
-            ? String(company.delivery_minimum_fee)
-            : "0",
-        delivery_round_trip_multiplier:
-          company.delivery_round_trip_multiplier != null
-            ? String(company.delivery_round_trip_multiplier)
-            : "4",
-        delivery_max_distance_km:
-          company.delivery_max_distance_km != null
-            ? String(company.delivery_max_distance_km)
-            : "10",
-        advance_payment_enabled: company.advance_payment_enabled ?? false,
-        advance_payment_percent:
-          company.advance_payment_percent != null
-            ? String(company.advance_payment_percent)
-            : "30",
-        pix_enabled: company.pix_enabled ?? false,
-        pix_key: company.pix_key ?? "",
-        pix_holder_name: company.pix_holder_name ?? "",
-      });
+setForm({
+  id: company.id ?? "",
+  name: company.name ?? "",
+  instagram: company.instagram ?? "",
+  whatsapp: company.whatsapp ?? "",
+  email_publico: company.email_publico ?? "",
+  document: company.document ?? "",
+  address_line: company.address_line ?? "",
+  address_number: company.address_number ?? "",
+  address_complement: company.address_complement ?? "",
+  neighborhood: company.neighborhood ?? "",
+  city: company.city ?? "",
+  state: company.state ?? "",
+  zip_code: company.zip_code ?? "",
+  slug: company.slug ?? slugify(company.name ?? ""),
+  public_description: company.public_description ?? "",
+  public_logo_url: company.public_logo_url ?? "",
+  public_cover_url: company.public_cover_url ?? "",
+  public_link_enabled: company.public_link_enabled ?? false,
+  public_link_title: company.public_link_title ?? "",
+  public_link_subtitle: company.public_link_subtitle ?? "",
+  business_hours: company.business_hours ?? "",
+  maps_link: company.maps_link ?? "",
+  delivery_enabled: company.delivery_enabled ?? false,
+  delivery_price_per_km:
+    company.delivery_price_per_km != null
+      ? String(company.delivery_price_per_km)
+      : "1.40",
+  delivery_minimum_fee:
+    company.delivery_minimum_fee != null
+      ? String(company.delivery_minimum_fee)
+      : "0",
+  delivery_round_trip_multiplier:
+    company.delivery_round_trip_multiplier != null
+      ? String(company.delivery_round_trip_multiplier)
+      : "4",
+  delivery_max_distance_km:
+    company.delivery_max_distance_km != null
+      ? String(company.delivery_max_distance_km)
+      : "10",
+  advance_payment_enabled: company.advance_payment_enabled ?? false,
+  advance_payment_percent:
+    company.advance_payment_percent != null
+      ? String(company.advance_payment_percent)
+      : "30",
+  pix_enabled: company.pix_enabled ?? false,
+  pix_key: company.pix_key ?? "",
+  pix_holder_name: company.pix_holder_name ?? "",
+});
     } catch {
       setStatus({
         type: "error",
@@ -482,40 +486,41 @@ function removeImage(type: "logo" | "cover") {
         return;
       }
 
-      const payload = {
-        name: form.name.trim(),
-        instagram: form.instagram.trim(),
-        whatsapp: cleanWhatsapp,
-        email_publico: form.email_publico.trim(),
-        address_line: form.address_line.trim(),
-        address_number: form.address_number.trim(),
-        address_complement: form.address_complement.trim(),
-        neighborhood: form.neighborhood.trim(),
-        city: form.city.trim(),
-        state: form.state.trim(),
-        zip_code: form.zip_code.trim(),
-        slug: cleanSlug,
-        public_description: form.public_description.trim(),
-        public_logo_url: form.public_logo_url.trim(),
-        public_cover_url: form.public_cover_url.trim(),
-        public_link_enabled: form.public_link_enabled,
-        public_link_title: form.public_link_title.trim(),
-        public_link_subtitle: form.public_link_subtitle.trim(),
-        business_hours: form.business_hours.trim(),
-        maps_link: form.maps_link.trim(),
-        delivery_enabled: form.delivery_enabled,
-        delivery_price_per_km: Number(form.delivery_price_per_km || 0),
-        delivery_minimum_fee: Number(form.delivery_minimum_fee || 0),
-        delivery_round_trip_multiplier: Number(
-          form.delivery_round_trip_multiplier || 4
-        ),
-        delivery_max_distance_km: Number(form.delivery_max_distance_km || 10),
-        advance_payment_enabled: form.advance_payment_enabled,
-        advance_payment_percent: Number(form.advance_payment_percent || 0),
-        pix_enabled: form.pix_enabled,
-        pix_key: form.pix_key.trim(),
-        pix_holder_name: form.pix_holder_name.trim(),
-      };
+const payload = {
+  name: form.name.trim(),
+  instagram: form.instagram.trim(),
+  whatsapp: cleanWhatsapp,
+  email_publico: form.email_publico.trim(),
+  document: form.document.trim(),
+  address_line: form.address_line.trim(),
+  address_number: form.address_number.trim(),
+  address_complement: form.address_complement.trim(),
+  neighborhood: form.neighborhood.trim(),
+  city: form.city.trim(),
+  state: form.state.trim(),
+  zip_code: form.zip_code.trim(),
+  slug: cleanSlug,
+  public_description: form.public_description.trim(),
+  public_logo_url: form.public_logo_url.trim(),
+  public_cover_url: form.public_cover_url.trim(),
+  public_link_enabled: form.public_link_enabled,
+  public_link_title: form.public_link_title.trim(),
+  public_link_subtitle: form.public_link_subtitle.trim(),
+  business_hours: form.business_hours.trim(),
+  maps_link: form.maps_link.trim(),
+  delivery_enabled: form.delivery_enabled,
+  delivery_price_per_km: Number(form.delivery_price_per_km || 0),
+  delivery_minimum_fee: Number(form.delivery_minimum_fee || 0),
+  delivery_round_trip_multiplier: Number(
+    form.delivery_round_trip_multiplier || 4
+  ),
+  delivery_max_distance_km: Number(form.delivery_max_distance_km || 10),
+  advance_payment_enabled: form.advance_payment_enabled,
+  advance_payment_percent: Number(form.advance_payment_percent || 0),
+  pix_enabled: form.pix_enabled,
+  pix_key: form.pix_key.trim(),
+  pix_holder_name: form.pix_holder_name.trim(),
+};
 
       const { error } = await supabase
         .from("companies")
@@ -691,13 +696,7 @@ function removeImage(type: "logo" | "cover") {
                   icon={Phone}
                 />
 
-                <Field
-                  label="E-mail público"
-                  value={form.email_publico}
-                  onChange={(value) => updateField("email_publico", value)}
-                  placeholder="contato@suaempresa.com"
-                  icon={Mail}
-                />
+
               </div>
             </div>
 
@@ -715,6 +714,45 @@ function removeImage(type: "logo" | "cover") {
                   </p>
                 </div>
               </div>
+
+
+              <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="mb-6 flex items-center gap-3">
+    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+      <Building2 className="h-5 w-5" />
+    </div>
+    <div>
+      <h2 className="text-lg font-semibold text-slate-950">
+        Dados fiscais
+      </h2>
+      <p className="text-sm text-slate-500">
+        Informações usadas no contrato e em dados formais da empresa.
+      </p>
+    </div>
+  </div>
+
+  <div className="grid gap-5 md:grid-cols-2">
+    <Field
+      label="Documento (CPF/CNPJ)"
+      value={form.document}
+      onChange={(value) => updateField("document", value)}
+      placeholder="Ex: 12.345.678/0001-99"
+      icon={Copy}
+    />
+
+    <Field
+      label="E-mail público"
+      value={form.email_publico}
+      onChange={(value) => updateField("email_publico", value)}
+      placeholder="contato@suaempresa.com"
+      icon={Mail}
+    />
+  </div>
+
+  <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+    Esses dados são importantes para deixar o contrato mais completo e profissional.
+  </div>
+</div>
 
               <div className="grid gap-5 md:grid-cols-2">
                 <Field

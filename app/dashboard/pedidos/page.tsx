@@ -307,7 +307,7 @@ function getCompanyDocument(company?: CompanyContext | null) {
       "cnpj",
       "cpf",
       "owner_document",
-    ]) || "—"
+    ]) || ""
   );
 }
 
@@ -326,10 +326,12 @@ function getCompanyPhone(company?: CompanyContext | null) {
 function getCompanyEmail(company?: CompanyContext | null) {
   return (
     getCompanyField(company, [
+      "email_publico",
       "email",
       "contact_email",
       "owner_email",
-    ]) || "—"
+      "owner_email_fallback",
+    ]) || ""
   );
 }
 
@@ -376,6 +378,15 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function buildContractPartyLines(lines: Array<[label: string, value: string]>) {
+  return lines
+    .filter(([, value]) => String(value || "").trim() !== "")
+    .map(
+      ([label, value]) => `${escapeHtml(label)}: ${escapeHtml(value)}<br />`
+    )
+    .join("");
 }
 
 function buildContractHtml(params: {
@@ -536,12 +547,14 @@ function buildContractHtml(params: {
           <div>
             <div class="muted">Locador</div>
             <div style="font-size:26px;font-weight:700;margin-top:6px;">${escapeHtml(companyName)}</div>
-            <div style="margin-top:8px;line-height:1.7;">
-              Documento: ${escapeHtml(companyDocument)}<br />
-              Telefone: ${escapeHtml(companyPhone)}<br />
-              E-mail: ${escapeHtml(companyEmail)}<br />
-              Endereço: ${escapeHtml(companyAddress)}
-            </div>
+<div style="margin-top:8px;line-height:1.7;">
+  ${buildContractPartyLines([
+    ["Documento", companyDocument],
+    ["Telefone", companyPhone === "—" ? "" : companyPhone],
+    ["E-mail", companyEmail],
+    ["Endereço", companyAddress === "—" ? "" : companyAddress],
+  ])}
+</div>
           </div>
 
           <div style="text-align:right;">
@@ -642,10 +655,14 @@ function buildContractHtml(params: {
         </div>
 
         <div class="signatures">
-          <div class="sign-line">
-            <div style="font-weight:700;">${escapeHtml(companyName)}</div>
-            <div style="margin-top:6px;">Documento: ${escapeHtml(companyDocument)}</div>
-          </div>
+<div class="sign-line">
+  <div style="font-weight:700;">${escapeHtml(companyName)}</div>
+  ${
+    companyDocument
+      ? `<div style="margin-top:6px;">Documento: ${escapeHtml(companyDocument)}</div>`
+      : ""
+  }
+</div>
 
           <div class="sign-line">
             <div style="font-weight:700;">${escapeHtml(clientName)}</div>
@@ -780,11 +797,14 @@ const [signatureSigners, setSignatureSigners] = useState<SignatureSignerDraft[]>
       const resolvedCompanyId = membership.company_id;
 
       setCompanyId(resolvedCompanyId);
-      setCompany({
-        id: resolvedCompanyId,
-        name: companyData?.name || "Minha empresa",
-        raw: companyData || null,
-      });
+setCompany({
+  id: resolvedCompanyId,
+  name: companyData?.name || "Minha empresa",
+  raw: {
+    ...(companyData || {}),
+    owner_email_fallback: user?.email || "",
+  },
+});
 
       const { data, error } = await supabase
         .from("decor_orders")
