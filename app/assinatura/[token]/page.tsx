@@ -565,9 +565,62 @@ const signedWhatsAppUrl = useMemo(() => {
   const safeSigner = signer;
   const safeRequestRow = requestRow;
 
-  const isAlreadySigned =
+
+
+
+const isAlreadySigned =
   safeRequestRow.status?.toLowerCase() === "signed" ||
   safeSigner.status?.toLowerCase() === "signed";
+
+if (isAlreadySigned) {
+  return (
+    <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-4">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Contrato já assinado
+            </div>
+
+            <div>
+              <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[32px]">
+                {title}
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Este link já foi utilizado e o contrato já está com assinatura concluída.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <InfoMiniCard label="Assinante" value={safeSigner.name} />
+              <InfoMiniCard label="Status" value="Assinado" />
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
+              Este contrato já foi assinado e, por segurança, o conteúdo completo não pode mais ser visualizado por este link.
+              {signedWhatsAppUrl
+                ? " Se desejar, você pode avisar a empresa pelo WhatsApp no botão abaixo."
+                : ""}
+            </div>
+
+            {signedWhatsAppUrl ? (
+              <a
+                href={signedWhatsAppUrl}
+                target={isMobile ? "_self" : "_blank"}
+                rel="noreferrer"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:w-auto"
+              >
+                Avisar empresa no WhatsApp
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 
 const contractPanelJsx = (
     <section className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
