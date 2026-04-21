@@ -81,6 +81,49 @@ function normalizeContractHtmlForMobile(html: string) {
   return output;
 }
 
+function normalizePhone(value?: string | null) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function buildWhatsAppUrl(phone?: string | null, text?: string) {
+  const clean = normalizePhone(phone);
+  if (!clean) return "";
+
+  const full = clean.startsWith("55") ? clean : `55${clean}`;
+  return `https://wa.me/${full}?text=${encodeURIComponent(text || "Olá!")}`;
+}
+
+function extractCompanyDataFromContractHtml(html?: string | null) {
+  if (!html) {
+    return {
+      companyName: "",
+      companyPhone: "",
+    };
+  }
+
+  const locadorSectionMatch = html.match(/Locador[\s\S]*?(?=<\/div>\s*<div style="text-align:right;">|Pedido)/i);
+  const locadorSection = locadorSectionMatch?.[0] || html;
+
+  const nameMatch =
+    locadorSection.match(/<div style="font-size:26px;font-weight:700;margin-top:6px;">([\s\S]*?)<\/div>/i) ||
+    locadorSection.match(/Locador[\s\S]*?<div[^>]*>([\s\S]*?)<\/div>/i);
+
+  const phoneMatch = locadorSection.match(/Telefone:\s*([^<\n\r]+)/i);
+
+  const rawName = nameMatch?.[1]
+    ?.replace(/<br\s*\/?>/gi, " ")
+    ?.replace(/<[^>]+>/g, "")
+    ?.replace(/&nbsp;/gi, " ")
+    ?.trim() || "";
+
+  const rawPhone = phoneMatch?.[1]?.trim() || "";
+
+  return {
+    companyName: rawName,
+    companyPhone: normalizePhone(rawPhone),
+  };
+}
+
 export default function SignaturePage({
   params,
 }: {
@@ -330,13 +373,41 @@ useEffect(() => {
         return;
       }
 
-      setResultMessage(
-        data?.fully_signed
-          ? "Assinatura concluída com sucesso. Documento finalizado."
-          : "Sua assinatura foi registrada com sucesso."
-      );
+      const successMessage = data?.fully_signed
+  ? "Assinatura concluída com sucesso. Documento finalizado."
+  : "Sua assinatura foi registrada com sucesso.";
 
-      await loadSignature();
+setResultMessage(successMessage);
+
+await loadSignature();
+
+const extractedCompanyData = extractCompanyDataFromContractHtml(
+  data?.request?.contract_html || requestRow?.contract_html || ""
+);
+
+const companyPhone = extractedCompanyData.companyPhone;
+const companyName = extractedCompanyData.companyName || "empresa";
+
+const whatsappMessage = [
+  `Olá, ${companyName}!`,
+  "",
+  `Acabei de assinar digitalmente o contrato "${data?.request?.contract_title || requestRow?.contract_title || "contrato"}".`,
+  `Assinante: ${signatureName?.trim() || signer?.name || "Cliente"}`,
+  signatureDocument?.trim() ? `Documento: ${signatureDocument.trim()}` : "",
+  "",
+  "Peço, por favor, que confirmem o recebimento da assinatura.",
+]
+  .filter(Boolean)
+  .join("\n");
+
+const whatsappUrl = buildWhatsAppUrl(companyPhone, whatsappMessage);
+
+if (whatsappUrl) {
+  setTimeout(() => {
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  }, 700);
+}
+
     } finally {
       setSaving(false);
     }
@@ -352,6 +423,36 @@ useEffect(() => {
       ? normalizeContractHtmlForMobile(requestRow.contract_html)
       : requestRow.contract_html;
   }, [requestRow, isMobile]);
+
+const companyData = useMemo(() => {
+  return extractCompanyDataFromContractHtml(requestRow?.contract_html || "");
+}, [requestRow]);
+
+const companyWhatsAppPhone = companyData.companyPhone;
+const companyWhatsAppName = companyData.companyName;
+
+const signedWhatsAppMessage = useMemo(() => {
+  const signerNameValue = signatureName?.trim() || signer?.name || "Cliente";
+  const contractTitleValue = requestRow?.contract_title || "contrato";
+  const signerDocumentValue = signatureDocument?.trim();
+  const companyNameValue = companyWhatsAppName?.trim() || "empresa";
+
+  return [
+    `Olá, ${companyNameValue}!`,
+    "",
+    `Acabei de assinar digitalmente o contrato "${contractTitleValue}".`,
+    `Assinante: ${signerNameValue}`,
+    signerDocumentValue ? `Documento: ${signerDocumentValue}` : "",
+    "",
+    "Peço, por favor, que confirmem o recebimento da assinatura.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}, [signatureName, signatureDocument, signer, requestRow, companyWhatsAppName]);
+
+const signedWhatsAppUrl = useMemo(() => {
+  return buildWhatsAppUrl(companyWhatsAppPhone, signedWhatsAppMessage);
+}, [companyWhatsAppPhone, signedWhatsAppMessage]);
 
   if (state.loading) {
     return (
@@ -502,10 +603,28 @@ const contractPanelJsx = (
             </button>
 
             {resultMessage ? (
-              <div className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${resultMessage.toLowerCase().includes("sucesso") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>
-                {resultMessage}
-              </div>
-            ) : null}
+  <div
+    className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
+      resultMessage.toLowerCase().includes("sucesso")
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : "border-rose-200 bg-rose-50 text-rose-700"
+    }`}
+  >
+    <div>{resultMessage}</div>
+
+    {resultMessage.toLowerCase().includes("sucesso") && signedWhatsAppUrl ? (
+      <a
+        href={signedWhatsAppUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+      >
+        Avisar empresa no WhatsApp
+      </a>
+    ) : null}
+  </div>
+) : null}
+
           </div>
         </div>
       </div>
