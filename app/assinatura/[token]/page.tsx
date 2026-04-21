@@ -90,9 +90,7 @@ function buildWhatsAppUrl(phone?: string | null, text?: string) {
   if (!clean) return "";
 
   const full = clean.startsWith("55") ? clean : `55${clean}`;
-  return `https://api.whatsapp.com/send?phone=${full}&text=${encodeURIComponent(
-    text || "Olá!"
-  )}`;
+  return `https://wa.me/${full}?text=${encodeURIComponent(text || "Olá!")}`;
 }
 
 function isEmbeddedMobileBrowser() {
@@ -456,12 +454,6 @@ if (whatsappUrl) {
   const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(
     navigator.userAgent || ""
   );
-  const isEmbedded = isEmbeddedMobileBrowser();
-
-  if (isMobileDevice && !isEmbedded) {
-    window.location.replace(whatsappUrl);
-    return;
-  }
 
   if (!isMobileDevice) {
     window.location.href = whatsappUrl;
@@ -469,8 +461,18 @@ if (whatsappUrl) {
   }
 
   setResultMessage(
-    `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
+    `${successMessage} Estamos tentando abrir o WhatsApp automaticamente. Se não abrir, toque no botão abaixo para avisar a empresa.`
   );
+
+  setTimeout(() => {
+    try {
+      window.location.href = whatsappUrl;
+    } catch (error) {
+      console.error("Erro ao tentar abrir o WhatsApp automaticamente:", error);
+    }
+  }, 150);
+
+  return;
 }
 
     } finally {
