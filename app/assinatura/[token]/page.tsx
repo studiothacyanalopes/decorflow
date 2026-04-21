@@ -49,6 +49,68 @@ function dataUrlToBlob(dataUrl: string) {
   return new Blob([u8arr], { type: mime });
 }
 
+async function compressImageFile(
+  file: File,
+  options?: {
+    maxWidth?: number;
+    maxHeight?: number;
+    quality?: number;
+  }
+): Promise<File> {
+  const maxWidth = options?.maxWidth ?? 1600;
+  const maxHeight = options?.maxHeight ?? 1600;
+  const quality = options?.quality ?? 0.78;
+
+  if (!file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const imageUrl = URL.createObjectURL(file);
+
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = imageUrl;
+    });
+
+    let { width, height } = img;
+
+    if (width > maxWidth || height > maxHeight) {
+      const ratio = Math.min(maxWidth / width, maxHeight / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", quality);
+    });
+
+    if (!blob) return file;
+
+    const finalName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+
+    return new File([blob], finalName, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
 function normalizeContractHtmlForMobile(html: string) {
   if (!html) return "";
 
@@ -382,21 +444,50 @@ useEffect(() => {
       );
       formData.append("signature_image", signatureBlob, "signature.png");
 
-      if (documentFront) {
-        const cleanName = sanitizeFileName(documentFront.name);
-        const cleanFile = new File([documentFront], cleanName, {
-          type: documentFront.type,
-        });
-        formData.append("document_front", cleanFile);
-      }
+if (documentFront) {
+  const compressedFront = await compressImageFile(documentFront, {
+    maxWidth: 1600,
+    maxHeight: 1600,
+    quality: 0.78,
+  });
 
-      if (documentBack) {
-        const cleanName = sanitizeFileName(documentBack.name);
-        const cleanFile = new File([documentBack], cleanName, {
-          type: documentBack.type,
-        });
-        formData.append("document_back", cleanFile);
-      }
+  const cleanName = sanitizeFileName(compressedFront.name);
+  const cleanFile = new File([compressedFront], cleanName, {
+    type: compressedFront.type,
+  });
+
+  formData.append("document_front", cleanFile);
+}
+
+if (documentBack) {
+  const compressedBack = await compressImageFile(documentBack, {
+    maxWidth: 1600,
+    maxHeight: 1600,
+    quality: 0.78,
+  });
+
+  const cleanName = sanitizeFileName(compressedBack.name);
+  const cleanFile = new File([compressedBack], cleanName, {
+    type: compressedBack.type,
+  });
+
+  formData.append("document_back", cleanFile);
+}
+
+if (selfie) {
+  const compressedSelfie = await compressImageFile(selfie, {
+    maxWidth: 1400,
+    maxHeight: 1400,
+    quality: 0.76,
+  });
+
+  const cleanName = sanitizeFileName(compressedSelfie.name);
+  const cleanFile = new File([compressedSelfie], cleanName, {
+    type: compressedSelfie.type,
+  });
+
+  formData.append("selfie", cleanFile);
+}
 
       if (selfie) {
         const cleanName = sanitizeFileName(selfie.name);
