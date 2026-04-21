@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Search,
   MessageCircle,
@@ -352,6 +352,9 @@ export default function EmpresaPublicPage() {
   const params = useParams<{ slug: string }>();
   const slug = typeof params?.slug === "string" ? params.slug : "";
 
+  const searchParams = useSearchParams();
+const sharedProductParam = (searchParams.get("produto") || "").trim().toLowerCase();
+
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState<Company | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -403,6 +406,56 @@ const [checkoutReviewStep, setCheckoutReviewStep] = useState(false);
     if (!slug) return;
     loadPublicCatalog();
   }, [slug]);
+
+  useEffect(() => {
+  if (!sharedProductParam) return;
+  if (products.length === 0) return;
+
+  const matchedProduct = products.find((product) => {
+    const productSlug = String(product.slug || "").trim().toLowerCase();
+    const productId = String(product.id || "").trim().toLowerCase();
+
+    return (
+      productSlug === sharedProductParam ||
+      productId === sharedProductParam
+    );
+  });
+
+  if (!matchedProduct) return;
+
+  setSelectedProduct(matchedProduct);
+  setProductDetailsOpen(true);
+
+  const category = categories.find((item) => item.id === matchedProduct.category_id);
+
+  if (category?.slug) {
+    setSelectedCategory(category.slug);
+  }
+
+  const firstSubcategory = getProductSubcategories(matchedProduct, subcategories)[0];
+
+  if (firstSubcategory?.slug) {
+    setSelectedSubcategory(firstSubcategory.slug);
+  } else {
+    setSelectedSubcategory("all");
+  }
+
+  if (typeof window !== "undefined") {
+    setTimeout(() => {
+      const target =
+        document.getElementById("kits") ||
+        document.getElementById("destaques") ||
+        document.getElementById("monte-seu-kit");
+
+      if (target) {
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }, 120);
+  }
+}, [sharedProductParam, products, categories, subcategories]);
 
     useEffect(() => {
     setRegularPage(1);
@@ -788,10 +841,16 @@ const regularProducts = useMemo(() => {
     }
   }
 
-  function openProductDetails(product: Product) {
-    setSelectedProduct(product);
-    setProductDetailsOpen(true);
+function openProductDetails(product: Product) {
+  setSelectedProduct(product);
+  setProductDetailsOpen(true);
+
+  if (typeof window !== "undefined") {
+    const url = new URL(window.location.href);
+    url.searchParams.set("produto", product.slug || product.id);
+    window.history.replaceState({}, "", url.toString());
   }
+}
 
   function addToCart(product: Product) {
     setCart((prev) => {
@@ -1835,12 +1894,21 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
           productDetailsOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
-        <div
-          className={`absolute inset-0 bg-black/60 transition ${
-            productDetailsOpen ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={() => setProductDetailsOpen(false)}
-        />
+<div
+  className={`absolute inset-0 bg-black/60 transition ${
+    productDetailsOpen ? "opacity-100" : "opacity-0"
+  }`}
+  onClick={() => {
+    setProductDetailsOpen(false);
+    setSelectedProduct(null);
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("produto");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }}
+/>
 
         <div
           className={`absolute inset-0 overflow-y-auto transition duration-300 ${
@@ -1850,14 +1918,24 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
           <div className="min-h-screen bg-[#050814] px-4 py-6 text-white sm:px-6 lg:px-8">
             {selectedProduct ? (
               <div className="mx-auto max-w-[1400px]">
-                <button
-                  type="button"
-                  onClick={() => setProductDetailsOpen(false)}
-                  className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
-                >
-                  <X className="h-4 w-4" />
-                  Fechar
-                </button>
+
+<button
+  type="button"
+  onClick={() => {
+    setProductDetailsOpen(false);
+    setSelectedProduct(null);
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("produto");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }}
+  className="mb-5 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+>
+  <X className="h-4 w-4" />
+  Fechar
+</button>
 
                 <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
                   <div className="overflow-hidden rounded-[30px] border border-white/10 bg-[#0b1018]">
@@ -2758,7 +2836,31 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
           </div>
         </aside>
       </div>
-      <div
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+<div
         className={`fixed inset-0 z-[70] transition ${
           checkoutModalOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
@@ -2773,10 +2875,11 @@ subcategory={getProductSubcategories(product, subcategories)[0]}
 
         {/* modal */}
         <div
-          className={`absolute inset-0 flex items-center justify-center px-4 transition duration-300 ${
-            checkoutModalOpen ? "opacity-100" : "opacity-0"
+          className={`absolute inset-0 overflow-y-auto px-4 py-4 transition duration-300 sm:px-5 sm:py-6 ${
+            checkoutModalOpen ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
           }`}
         >
+          <div className="flex min-h-full items-start justify-center sm:items-center"></div>
           <div className="w-full max-w-xl rounded-[30px] border border-white/10 bg-[#0b1018] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)]">
             
             {/* header */}
