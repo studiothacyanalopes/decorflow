@@ -90,7 +90,14 @@ function buildWhatsAppUrl(phone?: string | null, text?: string) {
   if (!clean) return "";
 
   const full = clean.startsWith("55") ? clean : `55${clean}`;
-  return `https://wa.me/${full}?text=${encodeURIComponent(text || "Olá!")}`;
+  return `https://api.whatsapp.com/send?phone=${full}&text=${encodeURIComponent(
+    text || "Olá!"
+  )}`;
+}
+
+function isEmbeddedMobileBrowser() {
+  const ua = navigator.userAgent || "";
+  return /Instagram|FBAN|FBAV|Messenger|Line|TikTok|Twitter/i.test(ua);
 }
 
 function extractCompanyDataFromContractHtml(html?: string | null) {
@@ -100,6 +107,7 @@ function extractCompanyDataFromContractHtml(html?: string | null) {
       companyPhone: "",
     };
   }
+
 
   const locadorSectionMatch = html.match(/Locador[\s\S]*?(?=<\/div>\s*<div style="text-align:right;">|Pedido)/i);
   const locadorSection = locadorSectionMatch?.[0] || html;
@@ -355,7 +363,7 @@ useEffect(() => {
       );
       formData.append("signature_image", signatureBlob, "signature.png");
 
-      if (selfie) formData.append("selfie", selfie);
+
 function sanitizeFileName(name: string) {
   return name
     .normalize("NFD")
@@ -445,7 +453,24 @@ console.log("DEBUG SIGNATURE WHATSAPP:", {
 });
 
 if (whatsappUrl) {
-  window.location.href = whatsappUrl;
+  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(
+    navigator.userAgent || ""
+  );
+  const isEmbedded = isEmbeddedMobileBrowser();
+
+  if (isMobileDevice && !isEmbedded) {
+    window.location.replace(whatsappUrl);
+    return;
+  }
+
+  if (!isMobileDevice) {
+    window.location.href = whatsappUrl;
+    return;
+  }
+
+  setResultMessage(
+    `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
+  );
 }
 
     } finally {
@@ -653,14 +678,14 @@ const contractPanelJsx = (
     <div>{resultMessage}</div>
 
     {resultMessage.toLowerCase().includes("sucesso") && signedWhatsAppUrl ? (
-      <a
-        href={signedWhatsAppUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-      >
-        Avisar empresa no WhatsApp
-      </a>
+<a
+  href={signedWhatsAppUrl}
+  target={isMobile ? "_self" : "_blank"}
+  rel="noreferrer"
+  className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+>
+  Avisar empresa no WhatsApp
+</a>
     ) : null}
   </div>
 ) : null}
