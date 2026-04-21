@@ -465,22 +465,15 @@ if (whatsappUrl) {
     navigator.userAgent || ""
   );
 
-  if (!isMobileDevice) {
-    window.location.href = whatsappUrl;
-    return;
-  }
-
-  setResultMessage(
-    `${successMessage} Estamos tentando abrir o WhatsApp automaticamente. Se não abrir, toque no botão abaixo para avisar a empresa.`
+setResultMessage(
+    `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
   );
 
-  setTimeout(() => {
-    try {
-      window.location.href = whatsappUrl;
-    } catch (error) {
-      console.error("Erro ao tentar abrir o WhatsApp automaticamente:", error);
-    }
-  }, 150);
+  try {
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  } catch {
+    // fallback silencioso — botão na tela resolve
+  }
 
   return;
 }
