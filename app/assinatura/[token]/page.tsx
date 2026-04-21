@@ -106,6 +106,7 @@ function extractCompanyDataFromContractHtml(html?: string | null) {
     };
   }
 
+
   const locadorSectionMatch = html.match(/Locador[\s\S]*?(?=<\/div>\s*<div style="text-align:right;">|Pedido)/i);
   const locadorSection = locadorSectionMatch?.[0] || html;
 
@@ -148,8 +149,9 @@ export default function SignaturePage({
   const [documentFront, setDocumentFront] = useState<File | null>(null);
   const [documentBack, setDocumentBack] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
-  const [resultMessage, setResultMessage] = useState("");
+const [resultMessage, setResultMessage] = useState("");
   const [postSignWhatsAppUrl, setPostSignWhatsAppUrl] = useState("");
+
   const [isMobile, setIsMobile] = useState(false);
   const [mobileTab, setMobileTab] = useState<"documento" | "assinatura">(
     "documento"
@@ -169,10 +171,10 @@ export default function SignaturePage({
     void loadSignature();
   }, [token]);
 
-  useEffect(() => {
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    setIsMobile(isMobileDevice);
-  }, []);
+useEffect(() => {
+  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  setIsMobile(isMobileDevice);
+}, []);
 
   useEffect(() => {
     const run = () => setupCanvas();
@@ -336,15 +338,15 @@ export default function SignaturePage({
       setSaving(true);
       setResultMessage("");
 
-      if (
-        requestRow?.status?.toLowerCase() === "signed" ||
-        signer?.status?.toLowerCase() === "signed"
-      ) {
-        setResultMessage(
-          "Este contrato já foi assinado. Se precisar, use o botão abaixo para avisar a empresa no WhatsApp."
-        );
-        return;
-      }
+          if (
+      requestRow?.status?.toLowerCase() === "signed" ||
+      signer?.status?.toLowerCase() === "signed"
+    ) {
+      setResultMessage(
+        "Este contrato já foi assinado. Se precisar, use o botão abaixo para avisar a empresa no WhatsApp."
+      );
+      return;
+    }
 
       if (!accepted) {
         setResultMessage("Você precisa aceitar os termos antes de assinar.");
@@ -371,38 +373,39 @@ export default function SignaturePage({
       );
       formData.append("signature_image", signatureBlob, "signature.png");
 
-      function sanitizeFileName(name: string) {
-        return name
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "-")
-          .replace(/[^a-zA-Z0-9.-]/g, "")
-          .toLowerCase();
-      }
 
-      if (documentFront) {
-        const cleanName = sanitizeFileName(documentFront.name);
-        const cleanFile = new File([documentFront], cleanName, {
-          type: documentFront.type,
-        });
-        formData.append("document_front", cleanFile);
-      }
+function sanitizeFileName(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .replace(/\s+/g, "-") // espaço → -
+    .replace(/[^a-zA-Z0-9.-]/g, "") // remove caracteres inválidos
+    .toLowerCase();
+}
 
-      if (documentBack) {
-        const cleanName = sanitizeFileName(documentBack.name);
-        const cleanFile = new File([documentBack], cleanName, {
-          type: documentBack.type,
-        });
-        formData.append("document_back", cleanFile);
-      }
+if (documentFront) {
+  const cleanName = sanitizeFileName(documentFront.name);
+  const cleanFile = new File([documentFront], cleanName, {
+    type: documentFront.type,
+  });
+  formData.append("document_front", cleanFile);
+}
 
-      if (selfie) {
-        const cleanName = sanitizeFileName(selfie.name);
-        const cleanFile = new File([selfie], cleanName, {
-          type: selfie.type,
-        });
-        formData.append("selfie", cleanFile);
-      }
+if (documentBack) {
+  const cleanName = sanitizeFileName(documentBack.name);
+  const cleanFile = new File([documentBack], cleanName, {
+    type: documentBack.type,
+  });
+  formData.append("document_back", cleanFile);
+}
+
+if (selfie) {
+  const cleanName = sanitizeFileName(selfie.name);
+  const cleanFile = new File([selfie], cleanName, {
+    type: selfie.type,
+  });
+  formData.append("selfie", cleanFile);
+}
 
       const response = await fetch(`/api/contracts/signature/${token}/sign`, {
         method: "POST",
@@ -418,43 +421,54 @@ export default function SignaturePage({
         return;
       }
 
-      const successMessage = data?.fully_signed
-        ? "Assinatura concluída com sucesso. Documento finalizado."
-        : "Sua assinatura foi registrada com sucesso.";
+const successMessage = data?.fully_signed
+  ? "Assinatura concluída com sucesso. Documento finalizado."
+  : "Sua assinatura foi registrada com sucesso.";
 
-      const htmlParaExtrair =
-        data?.request?.contract_html || requestRow?.contract_html || "";
+const htmlParaExtrair =
+  data?.request?.contract_html || requestRow?.contract_html || "";
 
-      const extractedCompanyData = extractCompanyDataFromContractHtml(htmlParaExtrair);
+const extractedCompanyData = extractCompanyDataFromContractHtml(htmlParaExtrair);
 
-      const companyPhone = extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
-      const companyName = extractedCompanyData.companyName || companyWhatsAppName || "empresa";
+const companyPhone =
+  extractedCompanyData.companyPhone || companyWhatsAppPhone || "";
 
-      const whatsappMessageFinal = [
-        `Olá, ${companyName}!`,
-        "",
-        `Acabei de assinar digitalmente o contrato "${data?.request?.contract_title || requestRow?.contract_title || "contrato"}".`,
-        `Assinante: ${signatureName?.trim() || signer?.name || "Cliente"}`,
-        signatureDocument?.trim() ? `Documento: ${signatureDocument.trim()}` : "",
-        "",
-        "Peço, por favor, que confirmem o recebimento da assinatura.",
-      ]
-        .filter(Boolean)
-        .join("\n");
+const companyName =
+  extractedCompanyData.companyName || companyWhatsAppName || "empresa";
 
-      const builtWhatsAppUrl = companyPhone
-        ? buildWhatsAppUrl(companyPhone, whatsappMessageFinal)
-        : "";
+const contractTitleValue =
+  data?.request?.contract_title || requestRow?.contract_title || "contrato";
 
-      setPostSignWhatsAppUrl(builtWhatsAppUrl);
+const signerNameValue =
+  signatureName?.trim() || signer?.name || "Cliente";
 
-      setResultMessage(
-        builtWhatsAppUrl
-          ? `${successMessage} Toque no botão abaixo para avisar a empresa no WhatsApp.`
-          : successMessage
-      );
+const signerDocumentValue = signatureDocument?.trim();
 
-      await loadSignature();
+const whatsappMessageFinal = [
+  `Olá, ${companyName}!`,
+  "",
+  `O contrato "${contractTitleValue}" foi assinado digitalmente com sucesso.`,
+  `Assinante: ${signerNameValue}`,
+  signerDocumentValue ? `Documento: ${signerDocumentValue}` : "",
+  "",
+  "Peço, por favor, que confirmem o recebimento da assinatura.",
+]
+  .filter(Boolean)
+  .join("\n");
+
+const builtWhatsAppUrl = companyPhone
+  ? buildWhatsAppUrl(companyPhone, whatsappMessageFinal)
+  : "";
+
+setPostSignWhatsAppUrl(builtWhatsAppUrl);
+
+setResultMessage(
+  builtWhatsAppUrl
+    ? `${successMessage} Agora toque no botão abaixo para notificar a empresa sobre a assinatura.`
+    : `${successMessage} Não foi possível montar o link do WhatsApp da empresa.`
+);
+
+await loadSignature();
 
     } finally {
       setSaving(false);
@@ -472,35 +486,39 @@ export default function SignaturePage({
       : requestRow.contract_html;
   }, [requestRow, isMobile]);
 
-  const companyData = useMemo(() => {
-    return extractCompanyDataFromContractHtml(requestRow?.contract_html || "");
-  }, [requestRow]);
+const companyData = useMemo(() => {
+  return extractCompanyDataFromContractHtml(requestRow?.contract_html || "");
+}, [requestRow]);
 
-  const companyWhatsAppPhone = companyData.companyPhone;
-  const companyWhatsAppName = companyData.companyName;
+const companyWhatsAppPhone = companyData.companyPhone;
+const companyWhatsAppName = companyData.companyName;
 
-  const signedWhatsAppMessage = useMemo(() => {
-    const signerNameValue = signatureName?.trim() || signer?.name || "Cliente";
-    const contractTitleValue = requestRow?.contract_title || "contrato";
-    const signerDocumentValue = signatureDocument?.trim();
-    const companyNameValue = companyWhatsAppName?.trim() || "empresa";
 
-    return [
-      `Olá, ${companyNameValue}!`,
-      "",
-      `Acabei de assinar digitalmente o contrato "${contractTitleValue}".`,
-      `Assinante: ${signerNameValue}`,
-      signerDocumentValue ? `Documento: ${signerDocumentValue}` : "",
-      "",
-      "Peço, por favor, que confirmem o recebimento da assinatura.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-  }, [signatureName, signatureDocument, signer, requestRow, companyWhatsAppName]);
 
-  const signedWhatsAppUrl = useMemo(() => {
-    return buildWhatsAppUrl(companyWhatsAppPhone, signedWhatsAppMessage);
-  }, [companyWhatsAppPhone, signedWhatsAppMessage]);
+
+
+const signedWhatsAppMessage = useMemo(() => {
+  const signerNameValue = signatureName?.trim() || signer?.name || "Cliente";
+  const contractTitleValue = requestRow?.contract_title || "contrato";
+  const signerDocumentValue = signatureDocument?.trim();
+  const companyNameValue = companyWhatsAppName?.trim() || "empresa";
+
+  return [
+    `Olá, ${companyNameValue}!`,
+    "",
+    `Acabei de assinar digitalmente o contrato "${contractTitleValue}".`,
+    `Assinante: ${signerNameValue}`,
+    signerDocumentValue ? `Documento: ${signerDocumentValue}` : "",
+    "",
+    "Peço, por favor, que confirmem o recebimento da assinatura.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}, [signatureName, signatureDocument, signer, requestRow, companyWhatsAppName]);
+
+const signedWhatsAppUrl = useMemo(() => {
+  return buildWhatsAppUrl(companyWhatsAppPhone, signedWhatsAppMessage);
+}, [companyWhatsAppPhone, signedWhatsAppMessage]);
 
   if (state.loading) {
     return (
@@ -532,60 +550,66 @@ export default function SignaturePage({
   const safeSigner = signer;
   const safeRequestRow = requestRow;
 
-  const isAlreadySigned =
-    safeRequestRow.status?.toLowerCase() === "signed" ||
-    safeSigner.status?.toLowerCase() === "signed";
 
-  if (isAlreadySigned) {
-    return (
-      <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
-        <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-            <div className="flex flex-col gap-4">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Contrato já assinado
-              </div>
 
-              <div>
-                <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[32px]">
-                  {title}
-                </h1>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Este link já foi utilizado e o contrato já está com assinatura concluída.
-                </p>
-              </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <InfoMiniCard label="Assinante" value={safeSigner.name} />
-                <InfoMiniCard label="Status" value="Assinado" />
-              </div>
+const isAlreadySigned =
+  safeRequestRow.status?.toLowerCase() === "signed" ||
+  safeSigner.status?.toLowerCase() === "signed";
 
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
-                Este contrato já foi assinado e, por segurança, o conteúdo completo não pode mais ser visualizado por este link.
-                {signedWhatsAppUrl
-                  ? " Se desejar, você pode avisar a empresa pelo WhatsApp no botão abaixo."
-                  : ""}
-              </div>
-
-              {signedWhatsAppUrl ? (
-                <a
-                  href={signedWhatsAppUrl}
-                  target={isMobile ? "_self" : "_blank"}
-                  rel="noreferrer"
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:w-auto"
-                >
-                  Avisar empresa no WhatsApp
-                </a>
-              ) : null}
+if (isAlreadySigned) {
+  return (
+    <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-4">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Contrato já assinado
             </div>
+
+            <div>
+              <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[32px]">
+                {title}
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Este link já foi utilizado e o contrato já está com assinatura concluída.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <InfoMiniCard label="Assinante" value={safeSigner.name} />
+              <InfoMiniCard label="Status" value="Assinado" />
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
+              Este contrato já foi assinado e, por segurança, o conteúdo completo não pode mais ser visualizado por este link.
+              {signedWhatsAppUrl
+                ? " Se desejar, você pode avisar a empresa pelo WhatsApp no botão abaixo."
+                : ""}
+            </div>
+
+                  {signedWhatsAppUrl ? (
+  <a
+    href={signedWhatsAppUrl}
+    target="_self"
+    rel="noreferrer"
+    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:w-auto"
+  >
+    Notificar a empresa sobre a assinatura
+  </a>
+) : null}
+
+
           </div>
         </div>
-      </main>
-    );
-  }
+      </div>
+    </main>
+  );
+}
 
-  const contractPanelJsx = (
+
+const contractPanelJsx = (
     <section className="min-w-0 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -610,6 +634,8 @@ export default function SignaturePage({
     </section>
   );
 
+
+
   const signaturePanelJsx = (
     <aside className="min-w-0">
       <div className="lg:sticky lg:top-6">
@@ -627,11 +653,11 @@ export default function SignaturePage({
           </div>
           <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
 
-            {isAlreadySigned ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700">
-                Este contrato já foi assinado. Caso precise, você pode avisar a empresa no WhatsApp pelo botão abaixo.
-              </div>
-            ) : null}
+    {isAlreadySigned ? (
+  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700">
+    Este contrato já foi assinado. Caso precise, você pode avisar a empresa no WhatsApp pelo botão abaixo.
+  </div>
+) : null}
 
             <FieldLabel htmlFor="signature-name">Nome para assinatura</FieldLabel>
             <input
@@ -699,10 +725,10 @@ export default function SignaturePage({
               <span className="text-sm leading-6 text-slate-700">Declaro que li o documento e concordo com os termos apresentados.</span>
             </label>
 
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={saving || isAlreadySigned}
+<button
+  type="button"
+  onClick={handleSubmit}
+  disabled={saving || isAlreadySigned}
               className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] px-4 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(79,70,229,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -710,27 +736,30 @@ export default function SignaturePage({
             </button>
 
             {resultMessage ? (
-              <div
-                className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
-                  resultMessage.toLowerCase().includes("sucesso")
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-rose-200 bg-rose-50 text-rose-700"
-                }`}
-              >
-                <div>{resultMessage}</div>
+  <div
+    className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
+      resultMessage.toLowerCase().includes("sucesso")
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : "border-rose-200 bg-rose-50 text-rose-700"
+    }`}
+  >
+    <div>{resultMessage}</div>
 
-                {postSignWhatsAppUrl ? (
-                  <a
-                    href={postSignWhatsAppUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                  >
-                    Avisar empresa no WhatsApp
-                  </a>
-                ) : null}
-              </div>
-            ) : null}
+{postSignWhatsAppUrl ? (
+  <a
+    href={postSignWhatsAppUrl}
+    target="_self"
+    rel="noreferrer"
+    className="mt-3 inline-flex h-11 items-center justify-center rounded-2xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+  >
+    Notificar a empresa sobre a assinatura
+  </a>
+) : null}
+
+
+
+  </div>
+) : null}
 
           </div>
         </div>
