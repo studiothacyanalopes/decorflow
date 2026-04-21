@@ -57,9 +57,9 @@ async function compressImageFile(
     quality?: number;
   }
 ): Promise<File> {
-  const maxWidth = options?.maxWidth ?? 1600;
-  const maxHeight = options?.maxHeight ?? 1600;
-  const quality = options?.quality ?? 0.78;
+  const maxWidth = options?.maxWidth ?? 1200;
+  const maxHeight = options?.maxHeight ?? 1200;
+  const quality = options?.quality ?? 0.72;
 
   if (!file.type.startsWith("image/")) {
     return file;
@@ -446,9 +446,9 @@ useEffect(() => {
 
 if (documentFront) {
   const compressedFront = await compressImageFile(documentFront, {
-    maxWidth: 1600,
-    maxHeight: 1600,
-    quality: 0.78,
+    maxWidth: 1100,
+    maxHeight: 1100,
+    quality: 0.68,
   });
 
   const cleanName = sanitizeFileName(compressedFront.name);
@@ -461,9 +461,9 @@ if (documentFront) {
 
 if (documentBack) {
   const compressedBack = await compressImageFile(documentBack, {
-    maxWidth: 1600,
-    maxHeight: 1600,
-    quality: 0.78,
+    maxWidth: 1100,
+    maxHeight: 1100,
+    quality: 0.68,
   });
 
   const cleanName = sanitizeFileName(compressedBack.name);
@@ -476,9 +476,9 @@ if (documentBack) {
 
 if (selfie) {
   const compressedSelfie = await compressImageFile(selfie, {
-    maxWidth: 1400,
-    maxHeight: 1400,
-    quality: 0.76,
+    maxWidth: 900,
+    maxHeight: 900,
+    quality: 0.64,
   });
 
   const cleanName = sanitizeFileName(compressedSelfie.name);
@@ -489,13 +489,7 @@ if (selfie) {
   formData.append("selfie", cleanFile);
 }
 
-      if (selfie) {
-        const cleanName = sanitizeFileName(selfie.name);
-        const cleanFile = new File([selfie], cleanName, {
-          type: selfie.type,
-        });
-        formData.append("selfie", cleanFile);
-      }
+
 
       const response = await fetch(`/api/contracts/signature/${token}/sign`, {
         method: "POST",
@@ -900,27 +894,33 @@ const contractPanelJsx = (
                 <button
                   type="button"
                   onClick={() => setMobileTab("documento")}
-                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition ${mobileTab === "documento" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600"}`}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition ${
+                    mobileTab === "documento"
+                      ? "bg-slate-950 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
                 >
                   <FileText className="h-4 w-4" />
                   Documento
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setMobileTab("assinatura")}
-                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition ${mobileTab === "assinatura" ? "bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] text-white" : "bg-slate-100 text-slate-600"}`}
+                  className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition ${
+                    mobileTab === "assinatura"
+                      ? "bg-[linear-gradient(135deg,#4f46e5_0%,#6366f1_100%)] text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
                 >
                   <SquarePen className="h-4 w-4" />
                   Assinatura
                 </button>
               </div>
             </div>
-            <div style={{ display: mobileTab === "documento" ? "block" : "none" }}>
-              {contractPanelJsx}
-            </div>
-            <div style={{ display: mobileTab === "assinatura" ? "block" : "none" }}>
-              {signaturePanelJsx}
-            </div>
+
+            {mobileTab === "documento" ? contractPanelJsx : null}
+            {mobileTab === "assinatura" ? signaturePanelJsx : null}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_420px]">
